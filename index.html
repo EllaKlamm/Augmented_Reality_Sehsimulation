@@ -71,11 +71,11 @@
 <div id="screen-sim" class="screen hidden">
   <button class="btn-secondary btn-small" id="back-btn">← Zurück</button>
   <div id="sim-ui">
-    <button class="btn-shader active" data-shader="none">Normal</button>
+    <button class="btn-shader active" data-shader="none">Ohne</button>
     <button class="btn-shader" data-shader="katarakt">Grauer Star</button>
     <button class="btn-shader" data-shader="glaukom">Glaukom</button>
-    <button class="btn-shader" data-shader="makula">Makuladeg.</button>
-    <button class="btn-shader" data-shader="farbe">Farbfehlsicht.</button>
+    <button class="btn-shader" data-shader="makula">Makuladegeneration</button>
+    <button class="btn-shader" data-shader="farbe">Rot-Grün-Schwäche</button>
   </div>
 </div>
 
@@ -167,15 +167,18 @@
 
     // Abstand von der Bildmitte bestimmt wie dunkel der Rand wird
     glaukom: `
-      uniform sampler2D uTexture;
-      varying vec2 vUv;
-      void main() {
-        vec4 c = texture2D(uTexture, vUv);
-        float dist = distance(vUv, vec2(0.5, 0.5));
-        float vignette = smoothstep(0.35, 0.65, dist);
-        gl_FragColor = mix(c, vec4(0.0, 0.0, 0.0, 1.0), vignette);
-      }
-    `,
+  uniform sampler2D uTexture;
+  varying vec2 vUv;
+  uniform vec2 uResolution;
+  void main() {
+    vec4 c = texture2D(uTexture, vUv);
+    vec2 uv = vUv - 0.5;
+    uv.x *= uResolution.x / uResolution.y;
+    float dist = length(uv);
+    float vignette = smoothstep(0.25, 0.5, dist);
+    gl_FragColor = mix(c, vec4(0.0, 0.0, 0.0, 1.0), vignette);
+  }
+`,
 
     // Blur nur in der Mitte: je näher zur Bildmitte, desto stärker
     makula: `
@@ -209,12 +212,15 @@
   };
 
   function buildMaterial(name) {
-    return new THREE.ShaderMaterial({
-      uniforms: { uTexture: { value: videoTexture } },
-      vertexShader,
-      fragmentShader: shaders[name]
-    });
-  }
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTexture:    { value: videoTexture },
+      uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+    },
+    vertexShader,
+    fragmentShader: shaders[name]
+  });
+}
 
   function setShader(name) {
     plane.material = buildMaterial(name);
