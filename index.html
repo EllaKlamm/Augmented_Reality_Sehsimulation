@@ -102,7 +102,7 @@
   const videoTexture = new THREE.VideoTexture(video);
   const plane = new THREE.Mesh(
     new THREE.PlaneGeometry(2, 2),
-    buildMaterial('none')
+    new THREE.MeshBasicMaterial()
   );
   scene.add(plane);
 
