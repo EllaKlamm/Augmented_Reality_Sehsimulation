@@ -159,6 +159,7 @@
       top: 20px;
       right: 20px;
       z-index: 9999;
+      pointer-events: auto;
     }
   </style>
 </head>
@@ -260,9 +261,8 @@
   plane.renderOrder = -1;
   scene.add(plane);
 
-  let tiltX  = 0;
-  let tiltY  = 0;
-  let xrMode = false;
+  let tiltX = 0;
+  let tiltY = 0;
 
   window.addEventListener('deviceorientation', (e) => {
     tiltX = (e.gamma || 0) / 90;
@@ -313,16 +313,12 @@
 
     renderer.xr.setSession(session);
 
-    plane.visible = false;
-    xrMode = true;
-
+    // Plane bleibt sichtbar, Shader laufen auf dem Videostream
     document.getElementById('xr-exit-btn').classList.remove('hidden');
     showScreen('screen-start');
 
     session.addEventListener('end', () => {
       document.getElementById('xr-exit-btn').classList.add('hidden');
-      plane.visible = true;
-      xrMode = false;
     });
   }
 
@@ -423,9 +419,7 @@
   }
 
   function setShader(name) {
-    if (!xrMode) {
-      plane.material = buildMaterial(name);
-    }
+    plane.material = buildMaterial(name);
   }
 
   function showVirtualObject(shader) {
