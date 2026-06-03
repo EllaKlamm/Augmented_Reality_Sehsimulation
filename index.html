@@ -146,6 +146,19 @@
     }
 
     #feedback-score { color: #aaa; font-size: 13px; }
+
+    #end-score {
+      color: white;
+      font-size: 48px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    #end-label {
+      color: #aaa;
+      font-size: 16px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -157,8 +170,15 @@
   <button class="btn-secondary" id="btn-to-game">Lernspiel</button>
 </div>
 
+<div id="screen-game-intro" class="screen hidden" style="background: #111;">
+  <h1>Lernspiel</h1>
+  <p>Eine zufällige Sehbehinderung wird aktiviert. Löse die Aufgabe und rate danach, was du gerade erlebt hast.</p>
+  <button class="btn-primary" id="btn-start-game">Los geht's</button>
+  <button class="btn-secondary btn-small" id="btn-intro-back">Zurück</button>
+</div>
+
 <div id="screen-sim" class="screen hidden">
-  <button class="btn-secondary btn-small" id="back-btn">← Zurück</button>
+  <button class="btn-secondary btn-small" id="back-btn">Zurück</button>
   <div id="sim-ui">
     <button class="btn-shader active" data-shader="none">Ohne</button>
     <button class="btn-shader" data-shader="katarakt">Grauer Star</button>
@@ -195,6 +215,14 @@
   <button class="btn-secondary btn-small" id="btn-quit">Beenden</button>
 </div>
 
+<div id="screen-end" class="screen hidden" style="background: #111;">
+  <h1>Geschafft!</h1>
+  <div id="end-score"></div>
+  <div id="end-label">richtig</div>
+  <button class="btn-primary" id="btn-replay">Nochmal spielen</button>
+  <button class="btn-secondary btn-small" id="btn-end-home">Zurück zum Start</button>
+</div>
+
 <script type="importmap">
   {
     "imports": {
@@ -219,12 +247,12 @@
   video.playsInline = true;
   const videoTexture = new THREE.VideoTexture(video);
 
-const plane = new THREE.Mesh(
-  new THREE.PlaneGeometry(2, 2),
-  new THREE.MeshBasicMaterial({ depthWrite: false })
-);
-plane.renderOrder = -1;
-scene.add(plane);
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.MeshBasicMaterial({ depthWrite: false })
+  );
+  plane.renderOrder = -1;
+  scene.add(plane);
 
   let tiltX = 0;
   let tiltY = 0;
@@ -341,17 +369,17 @@ scene.add(plane);
   };
 
   function buildMaterial(name) {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      uTexture:    { value: videoTexture },
-      uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-      uTilt:       { value: new THREE.Vector2(0, 0) }
-    },
-    vertexShader,
-    fragmentShader: shaders[name],
-    depthWrite: false
-  });
-}
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture:    { value: videoTexture },
+        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+        uTilt:       { value: new THREE.Vector2(0, 0) }
+      },
+      vertexShader,
+      fragmentShader: shaders[name],
+      depthWrite: false
+    });
+  }
 
   function setShader(name) {
     plane.material = buildMaterial(name);
@@ -453,7 +481,6 @@ scene.add(plane);
     currentShader = keys[Math.floor(Math.random() * keys.length)];
     setShader(currentShader);
     showVirtualObject(currentShader);
-
     document.getElementById('task-text').textContent = impairments[currentShader].task;
     showScreen('screen-game');
     startTimer();
@@ -496,11 +523,16 @@ scene.add(plane);
     document.getElementById('feedback-title').textContent = timedOut ? 'Zeit abgelaufen!' : correct ? 'Richtig!' : 'Nicht ganz.';
     document.getElementById('feedback-name').textContent  = 'Es war: ' + data.label;
     document.getElementById('feedback-text').textContent  = data.explanation;
-    document.getElementById('feedback-score').textContent = 'Richtig: ' + score + ' von ' + total;
+    document.getElementById('feedback-score').textContent = score + ' von ' + total + ' richtig';
 
     setShader('none');
     showVirtualObject('none');
     showScreen('screen-feedback');
+  }
+
+  function showEnd() {
+    document.getElementById('end-score').textContent = score + ' von ' + total;
+    showScreen('screen-end');
   }
 
   function showScreen(id) {
@@ -516,9 +548,17 @@ scene.add(plane);
 
   document.getElementById('btn-to-game').addEventListener('click', async () => {
     await startCamera();
+    showScreen('screen-game-intro');
+  });
+
+  document.getElementById('btn-start-game').addEventListener('click', () => {
     score = 0;
     total = 0;
     startRound();
+  });
+
+  document.getElementById('btn-intro-back').addEventListener('click', () => {
+    showScreen('screen-start');
   });
 
   document.getElementById('back-btn').addEventListener('click', () => {
@@ -544,6 +584,16 @@ scene.add(plane);
     clearInterval(timerInterval);
     setShader('none');
     showVirtualObject('none');
+    showEnd();
+  });
+
+  document.getElementById('btn-replay').addEventListener('click', () => {
+    score = 0;
+    total = 0;
+    startRound();
+  });
+
+  document.getElementById('btn-end-home').addEventListener('click', () => {
     showScreen('screen-start');
   });
 
