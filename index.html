@@ -57,6 +57,95 @@
 
     .btn-shader        { background: #ffffff22; color: white; border: 1px solid white; }
     .btn-shader.active { background: #00aaff; border-color: #00aaff; }
+
+    #task-box {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #000000cc;
+      padding: 20px;
+      text-align: center;
+    }
+
+    #task-text {
+      color: white;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    #timer-bar-wrap {
+      background: #ffffff33;
+      border-radius: 4px;
+      height: 6px;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    #timer-bar {
+      background: #00aaff;
+      border-radius: 4px;
+      height: 6px;
+      width: 100%;
+      transition: width 0.1s linear, background 0.3s;
+    }
+
+    #answer-ui {
+      position: fixed;
+      bottom: 20px;
+      left: 0; right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+    }
+
+    #answer-label {
+      color: #aaa;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .btn-answer {
+      width: 100%;
+      max-width: 320px;
+      padding: 12px;
+      font-size: 15px;
+      background: #ffffff22;
+      color: white;
+      border: 1px solid #ffffff44;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #screen-feedback {
+      background: #111;
+      padding: 30px;
+    }
+
+    #feedback-icon  { font-size: 48px; }
+
+    #feedback-title {
+      color: white;
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    #feedback-name {
+      color: #00aaff;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    #feedback-text {
+      color: #ccc;
+      font-size: 14px;
+      text-align: center;
+      line-height: 1.6;
+      max-width: 320px;
+    }
+
+    #feedback-score { color: #aaa; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -79,14 +168,45 @@
   </div>
 </div>
 
+<div id="screen-game" class="screen hidden">
+  <div id="task-box">
+    <div id="task-text">Aufgabe lädt...</div>
+    <div id="timer-bar-wrap">
+      <div id="timer-bar"></div>
+    </div>
+  </div>
+  <div id="answer-ui">
+    <div id="answer-label">Welche Sehbehinderung ist aktiv?</div>
+    <button class="btn-answer" data-answer="none">Ohne Sehbehinderung</button>
+    <button class="btn-answer" data-answer="katarakt">Grauer Star</button>
+    <button class="btn-answer" data-answer="glaukom">Glaukom</button>
+    <button class="btn-answer" data-answer="makula">Makuladegeneration</button>
+    <button class="btn-answer" data-answer="farbe">Rot-Grün-Schwäche</button>
+  </div>
+</div>
+
+<div id="screen-feedback" class="screen hidden">
+  <div id="feedback-icon"></div>
+  <div id="feedback-title"></div>
+  <div id="feedback-name"></div>
+  <p id="feedback-text"></p>
+  <p id="feedback-score"></p>
+  <button class="btn-primary" id="btn-next">Nächste Runde</button>
+  <button class="btn-secondary btn-small" id="btn-quit">Beenden</button>
+</div>
+
 <script type="importmap">
-  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.164.0/build/three.module.js" } }
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.0/examples/jsm/"
+    }
+  }
 </script>
 
 <script type="module">
   import * as THREE from 'three';
 
-  // Szene, Kamera, Renderer
   const scene    = new THREE.Scene();
   const camera   = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -94,7 +214,6 @@
   document.body.prepend(renderer.domElement);
   camera.position.z = 1;
 
-  // Kamerabild als Video-Textur
   const video = document.createElement('video');
   video.autoplay = true;
   video.playsInline = true;
@@ -106,16 +225,14 @@
   );
   scene.add(plane);
 
-  // Gyroskop-Werte für Blickachsen-Verschiebung
-  // Das Gyroskop liefert die Geräteneigung damit reagiert der
-  // Effekt auf Kopfbewegung statt starr fixiert zu bleiben.
   let tiltX = 0;
   let tiltY = 0;
-
   window.addEventListener('deviceorientation', (e) => {
     tiltX = (e.gamma || 0) / 90;
     tiltY = (e.beta  || 0) / 180;
   });
+
+  let virtualObject = null;
 
   function animate() {
     requestAnimationFrame(animate);
@@ -132,7 +249,6 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // Kamerazugriff (erst nach Nutzerinteraktion erlaubt)
   async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: 'environment' }
@@ -140,7 +256,6 @@
     video.srcObject = stream;
   }
 
-  // vertexShader: bestimmt Position der Pixel, bleibt immer gleich
   const vertexShader = `
     varying vec2 vUv;
     void main() {
@@ -151,7 +266,6 @@
 
   const shaders = {
 
-    // Kein Effekt
     none: `
       uniform sampler2D uTexture;
       varying vec2 vUv;
@@ -160,12 +274,6 @@
       }
     `,
 
-    // Grauer Star (Katarakt)
-    // Intensität: mittlerer Verlauf (~0.70 LogMAR, nach Abraham et al. 2024)
-    // Blur durch mehrere versetzte Samples + Gelbstich über Rot/Grün-Anhebung.
-    // Der Overall-Blur-Simulator für Katarakt in der Literatur reduziert
-    // die Sehschärfe auf ca. 0.70 LogMAR mein Blur-Wert von 0.015
-    // entspricht diesem mittleren Verlauf.
     katarakt: `
       uniform sampler2D uTexture;
       varying vec2 vUv;
@@ -184,12 +292,6 @@
       }
     `,
 
-    // Glaukom
-    // Intensität: mittlerer Verlauf (Gesichtsfeld ~20-30°, nach Jones et al. 2020)
-    // Abstand von der Blickachse bestimmt Dunkelheit des Randes.
-    // uTilt verschiebt die Mitte mit der Geräteneigung (Gyroskop).
-    // Blur als primärer Effekt Jones et al. (2020) belegen dass Blur
-    // das am häufigsten berichtete Glaukom-Symptom ist.
     glaukom: `
       uniform sampler2D uTexture;
       uniform vec2 uResolution;
@@ -206,11 +308,6 @@
       }
     `,
 
-    // Makuladegeneration
-    // Intensität: mittlerer Verlauf (zentrales Skotom ~10-20°)
-    // Blur nur in der Bildmitte je näher zur Mitte, desto stärker.
-    // uTilt verschiebt den Fleck leicht mit der Geräteneigung.
-    // Entspricht dem "central scotoma" Muster in Abraham et al. (2024).
     makula: `
       uniform sampler2D uTexture;
       uniform vec2 uTilt;
@@ -230,11 +327,6 @@
       }
     `,
 
-    // Rot-Grün-Schwäche (Deuteranopie)
-    // Farbkanal-Transformationsmatrix nach dem Vorbild von
-    // Zwoliński et al. (2025)  Rot und Grün werden angenähert,
-    // der Unterschied zwischen beiden verschwindet.
-    // Vollbild-Effekt, kein Gyroskop nötig.
     farbe: `
       uniform sampler2D uTexture;
       varying vec2 vUv;
@@ -263,7 +355,152 @@
     plane.material = buildMaterial(name);
   }
 
-  // Screens ein bzw. ausblenden
+  function showVirtualObject(shader) {
+    if (virtualObject) {
+      scene.remove(virtualObject);
+      virtualObject = null;
+    }
+
+    if (shader === 'none') return;
+
+    let geometry, material;
+
+    if (shader === 'katarakt') {
+      const isRed = Math.random() > 0.5;
+      geometry = new THREE.SphereGeometry(0.12, 32, 32);
+      material = new THREE.MeshBasicMaterial({
+        color: isRed ? 0xff2222 : 0x22cc44
+      });
+      virtualObject = new THREE.Mesh(geometry, material);
+      virtualObject.position.set(0, 0, -1.5);
+
+    } else if (shader === 'glaukom') {
+      geometry = new THREE.SphereGeometry(0.1, 32, 32);
+      material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+      virtualObject = new THREE.Mesh(geometry, material);
+      virtualObject.position.set(0.6, 0.3, -1.5);
+
+    } else if (shader === 'makula') {
+      const canvas = document.createElement('canvas');
+      canvas.width  = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, 256, 256);
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 160px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(Math.floor(1000 + Math.random() * 9000)), 128, 128);
+      const texture = new THREE.CanvasTexture(canvas);
+      geometry = new THREE.PlaneGeometry(0.5, 0.5);
+      material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+      virtualObject = new THREE.Mesh(geometry, material);
+      virtualObject.position.set(0, 0, -1.5);
+
+    } else if (shader === 'farbe') {
+      const isRed = Math.random() > 0.5;
+      geometry = new THREE.SphereGeometry(0.12, 32, 32);
+      material = new THREE.MeshBasicMaterial({
+        color: isRed ? 0xff2222 : 0x22cc44
+      });
+      virtualObject = new THREE.Mesh(geometry, material);
+      virtualObject.position.set(0, 0, -1.5);
+    }
+
+    if (virtualObject) scene.add(virtualObject);
+  }
+
+  const impairments = {
+    none: {
+      label: 'Ohne Sehbehinderung',
+      task: 'Schau dich um. Was siehst du gerade vor dir?',
+      explanation: 'Zum Vergleich: So sieht die Welt ohne aktive Sehbehinderung aus. Bemerkst du einen Unterschied zu den anderen Runden?'
+    },
+    katarakt: {
+      label: 'Grauer Star',
+      task: 'Welche Farbe hat das virtuelle Objekt vor dir?',
+      explanation: 'Grauer Star trübt die Augenlinse mit zunehmendem Alter. Farben wirken gelblich-verschleiert und Konturen unscharf. Mit einer Operation ist er vollständig heilbar, viele Menschen weltweit haben jedoch keinen Zugang zur Behandlung.'
+    },
+    glaukom: {
+      label: 'Glaukom',
+      task: 'Findest du das virtuelle Objekt am Rand deines Blickfeldes?',
+      explanation: 'Glaukom schädigt den Sehnerv und verengt das Gesichtsfeld von außen. Betroffene bemerken es oft erst spät, weil das zentrale Sehen lange erhalten bleibt.'
+    },
+    makula: {
+      label: 'Makuladegeneration',
+      task: 'Lies die Zahl, die vor dir erscheint.',
+      explanation: 'Makuladegeneration zerstört die Netzhautmitte. Genau dort, wo man hinschaut, entsteht ein blinder Fleck und Lesen sowie Gesichtererkennen werden besonders schwer.'
+    },
+    farbe: {
+      label: 'Rot-Grün-Schwäche',
+      task: 'Ist das Objekt vor dir rot oder grün?',
+      explanation: 'Rot-Grün-Schwäche ist die häufigste Farbfehlsichtigkeit. Rot und Grün sind kaum unterscheidbar und Ampeln, Obst, Karten und viele Alltagssituationen werden schwieriger.'
+    }
+  };
+
+  const keys = Object.keys(impairments);
+
+  let currentShader = null;
+  let score         = 0;
+  let total         = 0;
+  let timerInterval = null;
+  let timeLeft      = 0;
+  const ROUND_TIME  = 15;
+
+  function startRound() {
+    currentShader = keys[Math.floor(Math.random() * keys.length)];
+    setShader(currentShader);
+    showVirtualObject(currentShader);
+
+    document.getElementById('task-text').textContent = impairments[currentShader].task;
+    showScreen('screen-game');
+    startTimer();
+  }
+
+  function startTimer() {
+    timeLeft = ROUND_TIME;
+    const bar = document.getElementById('timer-bar');
+    bar.style.width = '100%';
+    bar.style.background = '#00aaff';
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeLeft -= 0.1;
+      const pct = (timeLeft / ROUND_TIME) * 100;
+      bar.style.width = pct + '%';
+
+      if (pct < 30) bar.style.background = '#ff4444';
+      else if (pct < 60) bar.style.background = '#ffaa00';
+
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        showFeedback(null);
+      }
+    }, 100);
+  }
+
+  function showFeedback(answer) {
+    clearInterval(timerInterval);
+    total++;
+
+    const correct  = answer === currentShader;
+    const timedOut = answer === null;
+
+    if (correct) score++;
+
+    const data = impairments[currentShader];
+
+    document.getElementById('feedback-icon').textContent  = timedOut ? '⏱️' : correct ? '✓' : '✗';
+    document.getElementById('feedback-title').textContent = timedOut ? 'Zeit abgelaufen!' : correct ? 'Richtig!' : 'Nicht ganz.';
+    document.getElementById('feedback-name').textContent  = 'Es war: ' + data.label;
+    document.getElementById('feedback-text').textContent  = data.explanation;
+    document.getElementById('feedback-score').textContent = 'Richtig: ' + score + ' von ' + total;
+
+    setShader('none');
+    showVirtualObject('none');
+    showScreen('screen-feedback');
+  }
+
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
@@ -275,8 +512,11 @@
     showScreen('screen-sim');
   });
 
-  document.getElementById('btn-to-game').addEventListener('click', () => {
-    alert('Lernspiel folgt noch!');
+  document.getElementById('btn-to-game').addEventListener('click', async () => {
+    await startCamera();
+    score = 0;
+    total = 0;
+    startRound();
   });
 
   document.getElementById('back-btn').addEventListener('click', () => {
@@ -290,6 +530,19 @@
       btn.classList.add('active');
       setShader(btn.dataset.shader);
     });
+  });
+
+  document.querySelectorAll('.btn-answer').forEach(btn => {
+    btn.addEventListener('click', () => showFeedback(btn.dataset.answer));
+  });
+
+  document.getElementById('btn-next').addEventListener('click', startRound);
+
+  document.getElementById('btn-quit').addEventListener('click', () => {
+    clearInterval(timerInterval);
+    setShader('none');
+    showVirtualObject('none');
+    showScreen('screen-start');
   });
 
 </script>
