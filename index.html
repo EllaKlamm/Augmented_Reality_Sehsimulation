@@ -249,8 +249,10 @@
   plane.renderOrder = -1;
   scene.add(plane);
 
-  let tiltX = 0;
-  let tiltY = 0;
+  let tiltX   = 0;
+  let tiltY   = 0;
+  let xrMode  = false;
+
   window.addEventListener('deviceorientation', (e) => {
     tiltX = (e.gamma || 0) / 90;
     tiltY = (e.beta  || 0) / 180;
@@ -299,6 +301,12 @@
     });
 
     renderer.xr.setSession(session);
+
+    // Im XR-Modus übernimmt Passthrough das Kamerabild
+    plane.visible = false;
+    xrMode = true;
+
+    showScreen('screen-start');
   }
 
   const vertexShader = `
@@ -398,7 +406,9 @@
   }
 
   function setShader(name) {
-    plane.material = buildMaterial(name);
+    if (!xrMode) {
+      plane.material = buildMaterial(name);
+    }
   }
 
   function showVirtualObject(shader) {
