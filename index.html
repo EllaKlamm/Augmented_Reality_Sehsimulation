@@ -99,12 +99,6 @@
       padding: 0 16px;
     }
 
-    #answer-label {
-      color: #aaa;
-      font-size: 13px;
-      margin-bottom: 4px;
-    }
-
     .btn-answer {
       width: 100%;
       max-width: 320px;
@@ -168,6 +162,7 @@
   <p>Erlebe wie Menschen mit Sehbehinderungen die Welt wahrnehmen</p>
   <button class="btn-primary" id="btn-to-sim">Simulation</button>
   <button class="btn-secondary" id="btn-to-game">Lernspiel</button>
+  <button class="btn-secondary" id="btn-xr">In AR öffnen</button>
 </div>
 
 <div id="screen-game-intro" class="screen hidden" style="background: #111;">
@@ -196,7 +191,6 @@
     </div>
   </div>
   <div id="answer-ui">
-    <div id="answer-label">Welche Sehbehinderung ist aktiv?</div>
     <button class="btn-answer" data-answer="none">Ohne Sehbehinderung</button>
     <button class="btn-answer" data-answer="katarakt">Grauer Star</button>
     <button class="btn-answer" data-answer="glaukom">Glaukom</button>
@@ -237,8 +231,9 @@
 
   const scene    = new THREE.Scene();
   const camera   = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
   document.body.prepend(renderer.domElement);
   camera.position.z = 1;
 
@@ -283,6 +278,27 @@
       video: { facingMode: 'environment' }
     });
     video.srcObject = stream;
+  }
+
+  async function startXR() {
+    if (!navigator.xr) {
+      alert('WebXR nicht verfügbar');
+      return;
+    }
+
+    const supported = await navigator.xr.isSessionSupported('immersive-ar');
+    if (!supported) {
+      alert('Immersive AR nicht unterstützt');
+      return;
+    }
+
+    const session = await navigator.xr.requestSession('immersive-ar', {
+      requiredFeatures: ['local'],
+      optionalFeatures: ['dom-overlay'],
+      domOverlay: { root: document.body }
+    });
+
+    renderer.xr.setSession(session);
   }
 
   const vertexShader = `
@@ -549,6 +565,11 @@
   document.getElementById('btn-to-game').addEventListener('click', async () => {
     await startCamera();
     showScreen('screen-game-intro');
+  });
+
+  document.getElementById('btn-xr').addEventListener('click', async () => {
+    await startCamera();
+    await startXR();
   });
 
   document.getElementById('btn-start-game').addEventListener('click', () => {
