@@ -219,9 +219,9 @@
   video.playsInline = true;
   const videoTexture = new THREE.VideoTexture(video);
 
- const plane = new THREE.Mesh(
+const plane = new THREE.Mesh(
   new THREE.PlaneGeometry(2, 2),
-  new THREE.MeshBasicMaterial()
+  new THREE.MeshBasicMaterial({ depthWrite: false })
 );
 plane.renderOrder = -1;
 scene.add(plane);
@@ -341,16 +341,17 @@ scene.add(plane);
   };
 
   function buildMaterial(name) {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        uTexture:    { value: videoTexture },
-        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-        uTilt:       { value: new THREE.Vector2(0, 0) }
-      },
-      vertexShader,
-      fragmentShader: shaders[name]
-    });
-  }
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uTexture:    { value: videoTexture },
+      uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+      uTilt:       { value: new THREE.Vector2(0, 0) }
+    },
+    vertexShader,
+    fragmentShader: shaders[name],
+    depthWrite: false
+  });
+}
 
   function setShader(name) {
     plane.material = buildMaterial(name);
@@ -373,13 +374,13 @@ scene.add(plane);
         color: isRed ? 0xff2222 : 0x22cc44
       });
       virtualObject = new THREE.Mesh(geometry, material);
-      virtualObject.position.set(0, 0, -0.8);
+      virtualObject.position.set(0, 0, 0.5);
 
     } else if (shader === 'glaukom') {
       geometry = new THREE.SphereGeometry(0.1, 32, 32);
       material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
       virtualObject = new THREE.Mesh(geometry, material);
-      virtualObject.position.set(0.6, 0.3, -0.8);
+      virtualObject.position.set(0.4, 0.2, 0.5);
 
     } else if (shader === 'makula') {
       const canvas = document.createElement('canvas');
@@ -396,7 +397,7 @@ scene.add(plane);
       geometry = new THREE.PlaneGeometry(0.5, 0.5);
       material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
       virtualObject = new THREE.Mesh(geometry, material);
-      virtualObject.position.set(0, 0, -1.5);
+      virtualObject.position.set(0, 0, 0.4);
 
     } else if (shader === 'farbe') {
       const isRed = Math.random() > 0.5;
@@ -405,7 +406,7 @@ scene.add(plane);
         color: isRed ? 0xff2222 : 0x22cc44
       });
       virtualObject = new THREE.Mesh(geometry, material);
-      virtualObject.position.set(0, 0, -1.5);
+      virtualObject.position.set(0, 0, 0.5);
     }
 
     if (virtualObject) scene.add(virtualObject);
