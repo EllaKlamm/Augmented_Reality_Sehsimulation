@@ -153,9 +153,20 @@
       font-size: 16px;
       text-align: center;
     }
+
+    #xr-exit-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
   </style>
 </head>
 <body>
+
+<div id="xr-exit-btn" class="hidden">
+  <button class="btn-secondary btn-small" id="btn-exit-xr">AR beenden</button>
+</div>
 
 <div id="screen-start" class="screen" style="background: #111;">
   <h1>AR Sehsimulation</h1>
@@ -249,9 +260,9 @@
   plane.renderOrder = -1;
   scene.add(plane);
 
-  let tiltX   = 0;
-  let tiltY   = 0;
-  let xrMode  = false;
+  let tiltX  = 0;
+  let tiltY  = 0;
+  let xrMode = false;
 
   window.addEventListener('deviceorientation', (e) => {
     tiltX = (e.gamma || 0) / 90;
@@ -302,11 +313,17 @@
 
     renderer.xr.setSession(session);
 
-    // Im XR-Modus übernimmt Passthrough das Kamerabild
     plane.visible = false;
     xrMode = true;
 
+    document.getElementById('xr-exit-btn').classList.remove('hidden');
     showScreen('screen-start');
+
+    session.addEventListener('end', () => {
+      document.getElementById('xr-exit-btn').classList.add('hidden');
+      plane.visible = true;
+      xrMode = false;
+    });
   }
 
   const vertexShader = `
@@ -580,6 +597,11 @@
   document.getElementById('btn-xr').addEventListener('click', async () => {
     await startCamera();
     await startXR();
+  });
+
+  document.getElementById('btn-exit-xr').addEventListener('click', () => {
+    const session = renderer.xr.getSession();
+    if (session) session.end();
   });
 
   document.getElementById('btn-start-game').addEventListener('click', () => {
