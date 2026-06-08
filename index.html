@@ -8,6 +8,25 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
 
+    /* Sehbehinderungs-Filter werden auf die a-scene angewendet */
+    a-scene { transition: filter 0.3s; }
+
+    .filter-katarakt {
+      filter: blur(3px) sepia(0.6) brightness(0.9) contrast(0.85);
+    }
+
+    .filter-glaukom {
+      /* Tunnel-Vision via vignette wird als Overlay gezeigt */
+    }
+
+    .filter-makula {
+      /* Zentrales Skotom wird als Overlay gezeigt */
+    }
+
+    .filter-farbe {
+      filter: url(#deuteranopia);
+    }
+
     .screen {
       position: fixed;
       top: 0; left: 0;
@@ -158,11 +177,11 @@
       text-align: center;
     }
 
-    #color-filter {
+    #vision-overlay {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: 50;
+      z-index: 5;
       pointer-events: none;
     }
 
@@ -179,18 +198,31 @@
 </head>
 <body style="margin: 0;">
 
+<!-- SVG Filter für Deuteranopie (Rot-Grün-Schwäche) -->
+<svg style="display:none">
+  <defs>
+    <filter id="deuteranopia">
+      <feColorMatrix type="matrix" values="
+        0.367 0.861 -0.228 0 0
+        0.280 0.673  0.047 0 0
+       -0.012 0.043  0.969 0 0
+        0     0      0     1 0"/>
+    </filter>
+  </defs>
+</svg>
+
 <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
-<a-scene arjs vr-mode-ui="enabled: false">
+<a-scene id="ar-scene" arjs vr-mode-ui="enabled: false">
   <a-marker preset="hiro" id="hiro-marker">
     <a-entity id="ar-object"></a-entity>
-    <a-sphere color="red" radius="0.3" position="0 0.3 0"></a-sphere>
   </a-marker>
   <a-entity camera></a-entity>
 </a-scene>
 
-<div id="color-filter" class="hidden"></div>
+<!-- Vision overlay für Glaukom und Makuladegeneration -->
+<canvas id="vision-overlay"></canvas>
 
 <div id="screen-start" class="screen" style="background: #111;">
   <h1>AR Sehsimulation</h1>
@@ -253,32 +285,85 @@
 </div>
 
 <script>
-  function setShader(name) {}
+  // Canvas overlay für Glaukom und Makuladegeneration
+  const overlay = document.getElementById('vision-overlay');
+  const ctx = overlay.getContext('2d');
+
+  function resizeOverlay() {
+    overlay.width  = window.innerWidth;
+    overlay.height = window.innerHeight;
+  }
+  resizeOverlay();
+  window.addEventListener('resize', resizeOverlay);
+
+  let activeShader = 'none';
+
+  function renderOverlay() {
+    requestAnimationFrame(renderOverlay);
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+    if (activeShader === 'glaukom') {
+      // Radiale Vignette von außen nach innen
+      const cx = overlay.width / 2;
+      const cy = overlay.height / 2;
+      const r  = Math.max(cx, cy) * 0.95;
+      const gradient = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
+      gradient.addColorStop(0, 'rgba(0,0,0,0)');
+      gradient.addColorStop(1, 'rgba(0,0,0,1)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, overlay.width, overlay.height);
+
+    } else if (activeShader === 'makula') {
+      // Unscharfer Fleck in der Mitte
+      const cx = overlay.width / 2;
+      const cy = overlay.height / 2;
+      const r  = Math.min(overlay.width, overlay.height) * 0.18;
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      gradient.addColorStop(0, 'rgba(0,0,0,0.85)');
+      gradient.addColorStop(0.6, 'rgba(0,0,0,0.4)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, overlay.width, overlay.height);
+    }
+  }
+  renderOverlay();
+
+  function setShader(name) {
+    activeShader = name;
+    const scene = document.getElementById('ar-scene');
+
+    // CSS-Filter entfernen
+    scene.style.filter = '';
+
+    if (name === 'katarakt') {
+      // Blur + Gelbstich via CSS
+      scene.style.filter = 'blur(3px) sepia(0.5) brightness(0.92) contrast(0.85)';
+
+    } else if (name === 'farbe') {
+      // Deuteranopie via SVG-Farbmatrix
+      scene.style.filter = 'url(#deuteranopia)';
+    }
+  }
 
   function setARObject(shader) {
     const entity = document.getElementById('ar-object');
     while (entity.firstChild) entity.removeChild(entity.firstChild);
 
-    const colorFilter = document.getElementById('color-filter');
-    colorFilter.classList.add('hidden');
-    colorFilter.style.background = 'none';
-    colorFilter.style.filter = 'none';
-
     if (shader === 'none') return;
 
-    if (shader === 'katarakt') {
+    if (shader === 'katarakt' || shader === 'farbe') {
       const isRed = Math.random() > 0.5;
       const obj = document.createElement('a-sphere');
       obj.setAttribute('color', isRed ? '#ff2222' : '#22cc44');
-      obj.setAttribute('radius', '0.4');
-      obj.setAttribute('position', '0 0.4 0');
+      obj.setAttribute('radius', '0.5');
+      obj.setAttribute('position', '0 0.5 0');
       entity.appendChild(obj);
 
     } else if (shader === 'glaukom') {
       const obj = document.createElement('a-sphere');
       obj.setAttribute('color', '#ffff00');
-      obj.setAttribute('radius', '0.3');
-      obj.setAttribute('position', '0 0.3 0');
+      obj.setAttribute('radius', '0.4');
+      obj.setAttribute('position', '0 0.4 0');
       entity.appendChild(obj);
 
     } else if (shader === 'makula') {
@@ -288,19 +373,8 @@
       text.setAttribute('color', 'white');
       text.setAttribute('align', 'center');
       text.setAttribute('position', '0 0.3 0');
-      text.setAttribute('scale', '1.5 1.5 1.5');
+      text.setAttribute('scale', '2 2 2');
       entity.appendChild(text);
-
-    } else if (shader === 'farbe') {
-      const isRed = Math.random() > 0.5;
-      const obj = document.createElement('a-sphere');
-      obj.setAttribute('color', isRed ? '#ff2222' : '#22cc44');
-      obj.setAttribute('radius', '0.4');
-      obj.setAttribute('position', '0 0.4 0');
-      entity.appendChild(obj);
-      colorFilter.classList.remove('hidden');
-      colorFilter.style.background = 'rgba(100, 60, 0, 0.25)';
-      colorFilter.style.filter = 'saturate(0.2) hue-rotate(30deg)';
     }
   }
 
