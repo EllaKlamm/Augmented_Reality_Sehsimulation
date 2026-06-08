@@ -167,14 +167,14 @@
     }
 
     #marker-hint {
-      position: fixed;
-      bottom: 80px;
-      left: 0; right: 0;
-      text-align: center;
-      color: #ffaa00;
-      font-size: 14px;
-      z-index: 100;
-    }
+  position: fixed;
+  top: 80px;
+  left: 0; right: 0;
+  text-align: center;
+  color: #ffaa00;
+  font-size: 14px;
+  z-index: 100;
+}
   </style>
 </head>
 <body style="margin: 0;">
@@ -265,23 +265,37 @@
   window.addEventListener('resize', resizeOverlay);
 
   function setARObject(shader) {
-    const entity = document.getElementById('ar-object');
-    entity.innerHTML = '';
-    if (shader === 'none') return;
+  const entity = document.getElementById('ar-object');
+  while (entity.firstChild) entity.removeChild(entity.firstChild);
 
-    if (shader === 'katarakt' || shader === 'farbe') {
-      const isRed = Math.random() > 0.5;
-      const color = isRed ? '#ff2222' : '#22cc44';
-      entity.innerHTML = `<a-sphere color="${color}" radius="0.05" position="0 0.05 0"></a-sphere>`;
+  if (shader === 'none') return;
 
-    } else if (shader === 'glaukom') {
-      entity.innerHTML = `<a-sphere color="#ffff00" radius="0.05" position="0.15 0.05 0"></a-sphere>`;
+  const obj = document.createElement('a-sphere');
 
-    } else if (shader === 'makula') {
-      const number = Math.floor(1000 + Math.random() * 9000);
-      entity.innerHTML = `<a-text value="${number}" color="white" align="center" position="0 0.05 0" scale="0.3 0.3 0.3"></a-text>`;
-    }
+  if (shader === 'katarakt' || shader === 'farbe') {
+    const isRed = Math.random() > 0.5;
+    obj.setAttribute('color', isRed ? '#ff2222' : '#22cc44');
+    obj.setAttribute('radius', '0.05');
+    obj.setAttribute('position', '0 0.05 0');
+    entity.appendChild(obj);
+
+  } else if (shader === 'glaukom') {
+    obj.setAttribute('color', '#ffff00');
+    obj.setAttribute('radius', '0.05');
+    obj.setAttribute('position', '0.15 0.05 0');
+    entity.appendChild(obj);
+
+  } else if (shader === 'makula') {
+    const number = Math.floor(1000 + Math.random() * 9000);
+    const text = document.createElement('a-text');
+    text.setAttribute('value', String(number));
+    text.setAttribute('color', 'white');
+    text.setAttribute('align', 'center');
+    text.setAttribute('position', '0 0.05 0');
+    text.setAttribute('scale', '0.3 0.3 0.3');
+    entity.appendChild(text);
   }
+}
 
   let currentShaderName = 'none';
 
