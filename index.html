@@ -1,28 +1,12 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <script>
-    // A-Frame Canvas transparent machen bevor A-Frame lädt
-    document.addEventListener('DOMContentLoaded', () => {
-      const observer = new MutationObserver(() => {
-        const c = document.querySelector('canvas.a-canvas');
-        if (c) {
-          c.style.background = 'transparent';
-          c.style.backgroundColor = 'transparent';
-          observer.disconnect();
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    });
-  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AR Sehsimulation</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
-
-    canvas { position: fixed; top: 0; left: 0; z-index: -1; }
 
     .screen {
       position: fixed;
@@ -193,16 +177,16 @@
     }
   </style>
 </head>
-<body>
+<body style="margin: 0;">
 
-<a-scene
-        arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: false;"
-        vr-mode-ui="enabled: false">
+<!-- Scripts vor a-scene, genau wie im funktionierenden Test -->
+<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+<script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
+<a-scene arjs vr-mode-ui="enabled: false">
   <a-marker preset="hiro" id="hiro-marker">
     <a-entity id="ar-object"></a-entity>
   </a-marker>
-
   <a-entity camera></a-entity>
 </a-scene>
 
@@ -268,9 +252,6 @@
   <button class="btn-secondary btn-small" id="btn-end-home">Zurück zum Start</button>
 </div>
 
-<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-<script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
 <script>
   const overlayCanvas = document.getElementById('shader-overlay');
   const gl = overlayCanvas.getContext('webgl');
@@ -286,7 +267,6 @@
   function setARObject(shader) {
     const entity = document.getElementById('ar-object');
     entity.innerHTML = '';
-
     if (shader === 'none') return;
 
     if (shader === 'katarakt' || shader === 'farbe') {
@@ -349,7 +329,7 @@
     farbe: `
       precision mediump float;
       void main() {
-        gl_FragColor = vec4(0.15, 0.0, 0.0, 0.0);
+        gl_FragColor = vec4(0.0);
       }
     `
   };
