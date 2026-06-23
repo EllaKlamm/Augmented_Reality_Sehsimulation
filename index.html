@@ -425,49 +425,58 @@
   }
   animateBalloons();
 
-document.addEventListener('touchstart', (e) => {
+document.addEventListener('pointerdown', (e) => {
+  console.log("Pointer erkannt", e.clientX, e.clientY);
 
-  console.log("Touch erkannt");
-    if (!gameActive) console.log("Spiel nicht aktiv");
+  if (!gameActive) {
+    console.log("Spiel nicht aktiv");
     return;
+  }
 
-    const touch = e.touches[0];
-    const mouse = new THREE.Vector2(
-      (touch.clientX / window.innerWidth)  * 2 - 1,
-     -(touch.clientY / window.innerHeight) * 2 + 1
-    );
+  console.log("Spiel aktiv");
+  console.log("Ballons:", balloons.length);
 
-    const sceneEl = document.getElementById('ar-scene');
-    const camera  = sceneEl.camera;
-    if (!camera) return;
+  const mouse = new THREE.Vector2(
+    (e.clientX / window.innerWidth) * 2 - 1,
+    -(e.clientY / window.innerHeight) * 2 + 1
+  );
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
+  const sceneEl = document.getElementById('ar-scene');
+  const camera = sceneEl.camera;
 
-    const meshes = [];
-    balloons.forEach(b => {
-      if (b.popped) return;
-      b.group.object3D.traverse(child => {
-        if (child.isMesh) {
-          child.userData.balloonRef = b;
-          meshes.push(child);
-        }
-      });
-    });
+  console.log("Camera:", camera);
 
-    console.log("Meshes:", meshes.length);
+  if (!camera) return;
 
-    const hits = raycaster.intersectObjects(meshes, false);
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
 
-    console.log("Hits:", hits.length);
+  const meshes = [];
 
-    if (hits.length > 0) {
-      const balloon = hits[0].object.userData.balloonRef;
-      if (balloon && !balloon.popped) {
-        popBalloon(balloon, touch.clientX, touch.clientY);
+  balloons.forEach(b => {
+    if (b.popped) return;
+
+    b.group.object3D.traverse(child => {
+      if (child.isMesh) {
+        child.userData.balloonRef = b;
+        meshes.push(child);
       }
+    });
+  });
+
+  console.log("Meshes:", meshes.length);
+
+  const hits = raycaster.intersectObjects(meshes, true);
+
+  console.log("Hits:", hits.length);
+
+  if (hits.length > 0) {
+    const balloon = hits[0].object.userData.balloonRef;
+    if (balloon && !balloon.popped) {
+      popBalloon(balloon, e.clientX, e.clientY);
     }
-  }, { passive: true });
+  }
+});
 
   function popBalloon(balloon, x, y) {
     if (balloon.popped) return;
