@@ -426,12 +426,42 @@
   animateBalloons();
 
 document.addEventListener('pointerdown', (e) => {
-  console.log("Pointer erkannt", e.clientX, e.clientY);
+  if (!gameActive) return;
 
-  if (!gameActive) {
-    console.log("Spiel nicht aktiv");
-    return;
+  const sceneEl = document.getElementById('ar-scene');
+  const camera = sceneEl.camera;
+  if (!camera) return;
+
+  let bestBalloon = null;
+  let bestDistance = Infinity;
+
+  balloons.forEach(b => {
+    if (b.popped) return;
+
+    const worldPos = new THREE.Vector3();
+    b.group.object3D.getWorldPosition(worldPos);
+
+    const screenPos = worldPos.clone().project(camera);
+
+    const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+
+    const dx = e.clientX - x;
+    const dy = e.clientY - y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      bestBalloon = b;
+    }
+  });
+
+  console.log("Bester Abstand:", bestDistance);
+
+  if (bestBalloon && bestDistance < 80) {
+    popBalloon(bestBalloon, e.clientX, e.clientY);
   }
+});
 
   console.log("Spiel aktiv");
   console.log("Ballons:", balloons.length);
