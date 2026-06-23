@@ -191,6 +191,8 @@
 <a-scene id="ar-scene" arjs vr-mode-ui="enabled: false">
   <a-marker preset="hiro" id="hiro-marker">
     <a-entity id="ar-object"></a-entity>
+    <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+    <a-entity light="type: directional; intensity: 0.8" position="1 2 1"></a-entity>
   </a-marker>
   <a-entity camera></a-entity>
 </a-scene>
@@ -276,25 +278,18 @@
   const cy = h / 2;
 
   if (activeShader === 'katarakt') {
-    // milchiger, gelblicher Schleier
-    ctx.fillStyle = 'rgba(255, 238, 190, 0.38)';
-    ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(255, 238, 190, 0.22)';
+  ctx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-    ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.fillRect(0, 0, w, h);
 
-    // leichte unregelmäßige Trübung
-    for (let i = 0; i < 18; i++) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      const r = 80 + Math.random() * 180;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, 'rgba(255,255,255,0.10)');
-      g.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-    }
-  }
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h));
+  g.addColorStop(0, 'rgba(255,255,255,0.04)');
+  g.addColorStop(1, 'rgba(255,255,255,0.22)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+}
 
   else if (activeShader === 'glaukom') {
     // Tunnelblick: Mitte bleibt frei, außen dunkel
@@ -364,11 +359,15 @@ function setShader(name) {
     group.setAttribute('id', id);
     group.setAttribute('position', `${pos.x} 0.1 ${pos.z}`);
 
-    const sphere = document.createElement('a-sphere');
-    sphere.setAttribute('color', color);
-    sphere.setAttribute('radius', '0.12');
-    sphere.setAttribute('position', '0 0 0');
-    sphere.setAttribute('material', 'shader: flat');
+    sphere.setAttribute('material',
+  'color: ' + color + '; roughness: 0.25; metalness: 0.05; shader: standard'
+);
+
+const highlight = document.createElement('a-sphere');
+highlight.setAttribute('radius', '0.035');
+highlight.setAttribute('position', '-0.04 0.05 0.09');
+highlight.setAttribute('material', 'color: white; opacity: 0.65; transparent: true; shader: flat');
+group.appendChild(highlight);
 
     const string = document.createElement('a-cylinder');
     string.setAttribute('color', '#999999');
@@ -464,6 +463,48 @@ document.addEventListener('pointerdown', (e) => {
   }
 });
 
+function createPopEffect(balloon) {
+  const parent = document.getElementById('ar-object');
+
+  for (let i = 0; i < 10; i++) {
+    const particle = document.createElement('a-sphere');
+
+    particle.setAttribute('radius', '0.025');
+    particle.setAttribute('color', balloon.color);
+
+    particle.setAttribute(
+      'position',
+      balloon.group.getAttribute('position')
+    );
+
+    const dx = (Math.random() - 0.5) * 0.8;
+    const dy = Math.random() * 0.8;
+    const dz = (Math.random() - 0.5) * 0.8;
+
+    particle.setAttribute(
+      'animation',
+      `property: position;
+       to: ${balloon.pos.x + dx}
+           ${parseFloat(balloon.group.getAttribute('position').y) + dy}
+           ${balloon.pos.z + dz};
+       dur: 450;
+       easing: easeOutQuad`
+    );
+
+    particle.setAttribute(
+      'animation__fade',
+      'property: material.opacity; to: 0; dur: 450'
+    );
+
+    parent.appendChild(particle);
+
+    setTimeout(() => {
+      if (particle.parentNode) {
+        particle.parentNode.removeChild(particle);
+      }
+    }, 500);
+  }
+}
 
 
   function popBalloon(balloon, x, y) {
@@ -478,6 +519,7 @@ document.addEventListener('pointerdown', (e) => {
     try {
       balloon.group.setAttribute('animation', 'property: scale; to: 2.5 2.5 2.5; dur: 120; easing: easeOutQuad');
     } catch(e) {}
+    createPopEffect(balloon);
     setTimeout(() => removeBalloon(balloon), 120);
   }
 
