@@ -463,50 +463,7 @@ document.addEventListener('pointerdown', (e) => {
   }
 });
 
-  console.log("Spiel aktiv");
-  console.log("Ballons:", balloons.length);
 
-  const mouse = new THREE.Vector2(
-    (e.clientX / window.innerWidth) * 2 - 1,
-    -(e.clientY / window.innerHeight) * 2 + 1
-  );
-
-  const sceneEl = document.getElementById('ar-scene');
-  const camera = sceneEl.camera;
-
-  console.log("Camera:", camera);
-
-  if (!camera) return;
-
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(mouse, camera);
-
-  const meshes = [];
-
-  balloons.forEach(b => {
-    if (b.popped) return;
-
-    b.group.object3D.traverse(child => {
-      if (child.isMesh) {
-        child.userData.balloonRef = b;
-        meshes.push(child);
-      }
-    });
-  });
-
-  console.log("Meshes:", meshes.length);
-
-  const hits = raycaster.intersectObjects(meshes, true);
-
-  console.log("Hits:", hits.length);
-
-  if (hits.length > 0) {
-    const balloon = hits[0].object.userData.balloonRef;
-    if (balloon && !balloon.popped) {
-      popBalloon(balloon, e.clientX, e.clientY);
-    }
-  }
-});
 
   function popBalloon(balloon, x, y) {
     if (balloon.popped) return;
