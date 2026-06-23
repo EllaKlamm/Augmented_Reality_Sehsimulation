@@ -8,25 +8,6 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
 
-    /* Sehbehinderungs-Filter werden auf die a-scene angewendet */
-    a-scene { transition: filter 0.3s; }
-
-    .filter-katarakt {
-      filter: blur(3px) sepia(0.6) brightness(0.9) contrast(0.85);
-    }
-
-    .filter-glaukom {
-      /* Tunnel-Vision via vignette wird als Overlay gezeigt */
-    }
-
-    .filter-makula {
-      /* Zentrales Skotom wird als Overlay gezeigt */
-    }
-
-    .filter-farbe {
-      filter: url(#deuteranopia);
-    }
-
     .screen {
       position: fixed;
       top: 0; left: 0;
@@ -198,7 +179,6 @@
 </head>
 <body style="margin: 0;">
 
-<!-- SVG Filter für Deuteranopie (Rot-Grün-Schwäche) -->
 <svg style="display:none">
   <defs>
     <filter id="deuteranopia">
@@ -221,7 +201,6 @@
   <a-entity camera></a-entity>
 </a-scene>
 
-<!-- Vision overlay für Glaukom und Makuladegeneration -->
 <canvas id="vision-overlay"></canvas>
 
 <div id="screen-start" class="screen" style="background: #111;">
@@ -303,24 +282,23 @@
     ctx.clearRect(0, 0, overlay.width, overlay.height);
 
     if (activeShader === 'glaukom') {
-      // Radiale Vignette von außen nach innen
       const cx = overlay.width / 2;
       const cy = overlay.height / 2;
-      const r  = Math.max(cx, cy) * 0.95;
-      const gradient = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
+      const r  = Math.max(cx, cy);
+      const gradient = ctx.createRadialGradient(cx, cy, r * 0.28, cx, cy, r);
       gradient.addColorStop(0, 'rgba(0,0,0,0)');
+      gradient.addColorStop(0.6, 'rgba(0,0,0,0.7)');
       gradient.addColorStop(1, 'rgba(0,0,0,1)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, overlay.width, overlay.height);
 
     } else if (activeShader === 'makula') {
-      // Unscharfer Fleck in der Mitte
       const cx = overlay.width / 2;
       const cy = overlay.height / 2;
-      const r  = Math.min(overlay.width, overlay.height) * 0.18;
+      const r  = Math.min(overlay.width, overlay.height) * 0.2;
       const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      gradient.addColorStop(0, 'rgba(0,0,0,0.85)');
-      gradient.addColorStop(0.6, 'rgba(0,0,0,0.4)');
+      gradient.addColorStop(0, 'rgba(0,0,0,0.9)');
+      gradient.addColorStop(0.5, 'rgba(0,0,0,0.5)');
       gradient.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, overlay.width, overlay.height);
@@ -328,55 +306,72 @@
   }
   renderOverlay();
 
+  // CSS-Filter auf body für Kamerabild-Effekte
   function setShader(name) {
     activeShader = name;
     const scene = document.getElementById('ar-scene');
-
-    // CSS-Filter entfernen
     scene.style.filter = '';
 
     if (name === 'katarakt') {
-      // Blur + Gelbstich via CSS
-      scene.style.filter = 'blur(3px) sepia(0.5) brightness(0.92) contrast(0.85)';
-
+      scene.style.filter = 'blur(2.5px) sepia(0.5) brightness(0.9) contrast(0.85)';
     } else if (name === 'farbe') {
-      // Deuteranopie via SVG-Farbmatrix
       scene.style.filter = 'url(#deuteranopia)';
     }
   }
 
+  // Objekte via marker-found Event setzen für Zuverlässigkeit
+  let pendingShader = 'none';
+
   function setARObject(shader) {
+    pendingShader = shader;
+    placeObject();
+  }
+
+  function placeObject() {
     const entity = document.getElementById('ar-object');
     while (entity.firstChild) entity.removeChild(entity.firstChild);
 
-    if (shader === 'none') return;
+    if (pendingShader === 'none') return;
 
-    if (shader === 'katarakt' || shader === 'farbe') {
+    if (pendingShader === 'katarakt' || pendingShader === 'farbe') {
       const isRed = Math.random() > 0.5;
       const obj = document.createElement('a-sphere');
       obj.setAttribute('color', isRed ? '#ff2222' : '#22cc44');
       obj.setAttribute('radius', '0.5');
       obj.setAttribute('position', '0 0.5 0');
+      obj.setAttribute('material', 'shader: flat');
       entity.appendChild(obj);
 
-    } else if (shader === 'glaukom') {
+    } else if (pendingShader === 'glaukom') {
       const obj = document.createElement('a-sphere');
-      obj.setAttribute('color', '#ffff00');
+      obj.setAttribute('color', '#ffdd00');
       obj.setAttribute('radius', '0.4');
       obj.setAttribute('position', '0 0.4 0');
+      obj.setAttribute('material', 'shader: flat');
       entity.appendChild(obj);
 
-    } else if (shader === 'makula') {
+    } else if (pendingShader === 'makula') {
       const number = Math.floor(1000 + Math.random() * 9000);
       const text = document.createElement('a-text');
       text.setAttribute('value', String(number));
       text.setAttribute('color', 'white');
       text.setAttribute('align', 'center');
-      text.setAttribute('position', '0 0.3 0');
-      text.setAttribute('scale', '2 2 2');
+      text.setAttribute('position', '0 0.1 0');
+      text.setAttribute('scale', '2.5 2.5 2.5');
+      text.setAttribute('look-at', '[camera]');
       entity.appendChild(text);
     }
   }
+
+  // Marker Events: Objekt neu platzieren wenn Marker gefunden wird
+  document.addEventListener('DOMContentLoaded', () => {
+    const marker = document.getElementById('hiro-marker');
+    if (marker) {
+      marker.addEventListener('markerFound', () => {
+        placeObject();
+      });
+    }
+  });
 
   const impairments = {
     none: {
@@ -478,6 +473,7 @@
 
   document.getElementById('btn-to-sim').addEventListener('click', () => {
     setShader('none');
+    setARObject('none');
     showScreen('screen-sim');
   });
 
