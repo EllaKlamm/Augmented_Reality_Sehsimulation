@@ -348,56 +348,72 @@ function setShader(name) {
   }
 
   function spawnBalloon() {
-    const entity = document.getElementById('ar-object');
-    const isRed  = Math.random() < 0.3;
-    const color  = isRed ? '#ff2222' : BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)];
-    const pos    = randomPos();
-    const id     = 'b' + Date.now() + Math.floor(Math.random() * 1000);
-    const duration = 4000 + Math.random() * 2000;
+  const entity = document.getElementById('ar-object');
+  const isRed  = Math.random() < 0.3;
+  const color  = isRed ? '#ff2222' : BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)];
+  const pos    = randomPos();
+  const id     = 'b' + Date.now() + Math.floor(Math.random() * 1000);
+  const duration = 4000 + Math.random() * 2000;
 
-    const group = document.createElement('a-entity');
-    group.setAttribute('id', id);
-    group.setAttribute('position', `${pos.x} 0.1 ${pos.z}`);
+  const group = document.createElement('a-entity');
+  group.setAttribute('id', id);
+  group.setAttribute('position', `${pos.x} 0.1 ${pos.z}`);
 
-    sphere.setAttribute('material',
-  'color: ' + color + '; roughness: 0.25; metalness: 0.05; shader: standard'
-);
+  const sphere = document.createElement('a-sphere');
+  sphere.setAttribute('radius', '0.12');
+  sphere.setAttribute('position', '0 0 0');
+  sphere.setAttribute(
+    'material',
+    'color: ' + color + '; roughness: 0.25; metalness: 0.05; shader: standard'
+  );
 
-const highlight = document.createElement('a-sphere');
-highlight.setAttribute('radius', '0.035');
-highlight.setAttribute('position', '-0.04 0.05 0.09');
-highlight.setAttribute('material', 'color: white; opacity: 0.65; transparent: true; shader: flat');
-group.appendChild(highlight);
+  const knot = document.createElement('a-cone');
+  knot.setAttribute('radius-bottom', '0.035');
+  knot.setAttribute('radius-top', '0.005');
+  knot.setAttribute('height', '0.05');
+  knot.setAttribute('position', '0 -0.13 0');
+  knot.setAttribute('rotation', '180 0 0');
+  knot.setAttribute('material', 'color: ' + color + '; shader: standard');
 
-    const string = document.createElement('a-cylinder');
-    string.setAttribute('color', '#999999');
-    string.setAttribute('radius', '0.006');
-    string.setAttribute('height', '0.18');
-    string.setAttribute('position', '0 -0.2 0');
-    string.setAttribute('material', 'shader: flat');
+  const highlight = document.createElement('a-sphere');
+  highlight.setAttribute('radius', '0.035');
+  highlight.setAttribute('position', '-0.04 0.05 0.09');
+  highlight.setAttribute(
+    'material',
+    'color: white; opacity: 0.65; transparent: true; shader: flat'
+  );
 
-    group.appendChild(sphere);
-    group.appendChild(string);
-    entity.appendChild(group);
+  const string = document.createElement('a-cylinder');
+  string.setAttribute('color', '#eeeeee');
+  string.setAttribute('radius', '0.004');
+  string.setAttribute('height', '0.22');
+  string.setAttribute('position', '0 -0.27 0');
+  string.setAttribute('material', 'shader: flat');
 
-    const balloon = {
-      id, group, isRed, color,
-      popped: false,
-      startTime: Date.now(),
-      duration,
-      startY: 0.1,
-      endY: 2.0,
-      pos
-    };
-    balloons.push(balloon);
+  group.appendChild(sphere);
+  group.appendChild(knot);
+  group.appendChild(highlight);
+  group.appendChild(string);
+  entity.appendChild(group);
 
-    setTimeout(() => {
-      if (!balloon.popped && gameActive) {
-        if (!isRed) updateScore(-1, null, null);
-        removeBalloon(balloon);
-      }
-    }, duration);
-  }
+  const balloon = {
+    id, group, isRed, color,
+    popped: false,
+    startTime: Date.now(),
+    duration,
+    startY: 0.1,
+    endY: 2.0,
+    pos
+  };
+  balloons.push(balloon);
+
+  setTimeout(() => {
+    if (!balloon.popped && gameActive) {
+      if (!isRed) updateScore(-1, null, null);
+      removeBalloon(balloon);
+    }
+  }, duration);
+}
 
   function removeBalloon(balloon) {
     balloon.popped = true;
