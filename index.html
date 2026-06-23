@@ -60,59 +60,53 @@
     .btn-shader        { background: #ffffff22; color: white; border: 1px solid white; }
     .btn-shader.active { background: #00aaff; border-color: #00aaff; }
 
-    #task-box {
+    #game-ui {
       position: fixed;
       top: 0; left: 0; right: 0;
       background: #000000cc;
-      padding: 20px;
-      text-align: center;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       z-index: 100;
     }
 
-    #task-text {
+    #score-display {
       color: white;
-      font-size: 18px;
-      margin-bottom: 8px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    #timer-display {
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
     }
 
     #timer-bar-wrap {
+      position: fixed;
+      top: 56px;
+      left: 0; right: 0;
       background: #ffffff33;
-      border-radius: 4px;
       height: 6px;
-      width: 100%;
-      margin-top: 8px;
+      z-index: 100;
     }
 
     #timer-bar {
       background: #00aaff;
-      border-radius: 4px;
       height: 6px;
       width: 100%;
       transition: width 0.1s linear, background 0.3s;
     }
 
-    #answer-ui {
+    #marker-hint {
       position: fixed;
-      bottom: 20px;
+      top: 72px;
       left: 0; right: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 0 16px;
+      text-align: center;
+      color: #ffaa00;
+      font-size: 14px;
       z-index: 100;
-    }
-
-    .btn-answer {
-      width: 100%;
-      max-width: 320px;
-      padding: 12px;
-      font-size: 15px;
-      background: #ffffff22;
-      color: white;
-      border: 1px solid #ffffff44;
-      border-radius: 8px;
-      cursor: pointer;
     }
 
     #screen-feedback {
@@ -166,14 +160,14 @@
       pointer-events: none;
     }
 
-    #marker-hint {
+    #hit-effect {
       position: fixed;
-      top: 90px;
-      left: 0; right: 0;
-      text-align: center;
-      color: #ffaa00;
-      font-size: 14px;
-      z-index: 100;
+      pointer-events: none;
+      z-index: 200;
+      font-size: 32px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.1s;
     }
   </style>
 </head>
@@ -202,6 +196,7 @@
 </a-scene>
 
 <canvas id="vision-overlay"></canvas>
+<div id="hit-effect"></div>
 
 <div id="screen-start" class="screen" style="background: #111;">
   <h1>AR Sehsimulation</h1>
@@ -212,7 +207,7 @@
 
 <div id="screen-game-intro" class="screen hidden" style="background: #111;">
   <h1>Lernspiel</h1>
-  <p>Eine zufällige Sehbehinderung wird aktiviert. Halte die Kamera auf den Marker um die Aufgabe zu starten.</p>
+  <p>Bunte Luftballons aufstechen, rote vermeiden. Halte die Kamera auf den Hiro-Marker.</p>
   <button class="btn-primary" id="btn-start-game">Los geht's</button>
   <button class="btn-secondary btn-small" id="btn-intro-back">Zurück</button>
 </div>
@@ -229,20 +224,14 @@
 </div>
 
 <div id="screen-game" class="screen hidden">
-  <div id="task-box">
-    <div id="task-text">Aufgabe lädt...</div>
-    <div id="timer-bar-wrap">
-      <div id="timer-bar"></div>
-    </div>
+  <div id="game-ui">
+    <div id="score-display">0 Punkte</div>
+    <div id="timer-display">15</div>
+  </div>
+  <div id="timer-bar-wrap">
+    <div id="timer-bar"></div>
   </div>
   <div id="marker-hint">Halte die Kamera auf den Marker</div>
-  <div id="answer-ui">
-    <button class="btn-answer" data-answer="none">Ohne Sehbehinderung</button>
-    <button class="btn-answer" data-answer="katarakt">Grauer Star</button>
-    <button class="btn-answer" data-answer="glaukom">Glaukom</button>
-    <button class="btn-answer" data-answer="makula">Makuladegeneration</button>
-    <button class="btn-answer" data-answer="farbe">Rot-Grün-Schwäche</button>
-  </div>
 </div>
 
 <div id="screen-feedback" class="screen hidden">
@@ -258,13 +247,13 @@
 <div id="screen-end" class="screen hidden" style="background: #111;">
   <h1>Geschafft!</h1>
   <div id="end-score"></div>
-  <div id="end-label">richtig</div>
+  <div id="end-label">Punkte gesamt</div>
   <button class="btn-primary" id="btn-replay">Nochmal spielen</button>
   <button class="btn-secondary btn-small" id="btn-end-home">Zurück zum Start</button>
 </div>
 
 <script>
-  // Canvas overlay für Glaukom und Makuladegeneration
+  // Vision overlay
   const overlay = document.getElementById('vision-overlay');
   const ctx = overlay.getContext('2d');
 
@@ -285,33 +274,31 @@
       const cx = overlay.width / 2;
       const cy = overlay.height / 2;
       const r  = Math.max(cx, cy);
-      const gradient = ctx.createRadialGradient(cx, cy, r * 0.28, cx, cy, r);
-      gradient.addColorStop(0, 'rgba(0,0,0,0)');
-      gradient.addColorStop(0.6, 'rgba(0,0,0,0.7)');
-      gradient.addColorStop(1, 'rgba(0,0,0,1)');
-      ctx.fillStyle = gradient;
+      const g  = ctx.createRadialGradient(cx, cy, r * 0.28, cx, cy, r);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(0.6, 'rgba(0,0,0,0.7)');
+      g.addColorStop(1, 'rgba(0,0,0,1)');
+      ctx.fillStyle = g;
       ctx.fillRect(0, 0, overlay.width, overlay.height);
 
     } else if (activeShader === 'makula') {
       const cx = overlay.width / 2;
       const cy = overlay.height / 2;
       const r  = Math.min(overlay.width, overlay.height) * 0.2;
-      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      gradient.addColorStop(0, 'rgba(0,0,0,0.9)');
-      gradient.addColorStop(0.5, 'rgba(0,0,0,0.5)');
-      gradient.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = gradient;
+      const g  = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0, 'rgba(0,0,0,0.9)');
+      g.addColorStop(0.5, 'rgba(0,0,0,0.5)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
       ctx.fillRect(0, 0, overlay.width, overlay.height);
     }
   }
   renderOverlay();
 
-  // CSS-Filter auf body für Kamerabild-Effekte
   function setShader(name) {
     activeShader = name;
     const scene = document.getElementById('ar-scene');
     scene.style.filter = '';
-
     if (name === 'katarakt') {
       scene.style.filter = 'blur(2.5px) sepia(0.5) brightness(0.9) contrast(0.85)';
     } else if (name === 'farbe') {
@@ -319,102 +306,225 @@
     }
   }
 
-  // Objekte via marker-found Event setzen für Zuverlässigkeit
-  let pendingShader = 'none';
+  // Luftballon-System
+  const BALLOON_COLORS = ['#22aaff', '#22cc44', '#ffdd00', '#cc44ff', '#ff6600'];
+  const balloons = [];
+  let gameActive = false;
+  let spawnInterval = null;
 
-  function setARObject(shader) {
-    pendingShader = shader;
-    placeObject();
+  function randomPos() {
+    return {
+      x: (Math.random() - 0.5) * 0.6,
+      z: (Math.random() - 0.5) * 0.6
+    };
   }
 
-  function placeObject() {
+  function spawnBalloon() {
     const entity = document.getElementById('ar-object');
-    while (entity.firstChild) entity.removeChild(entity.firstChild);
+    const isRed  = Math.random() < 0.35;
+    const color  = isRed ? '#ff2222' : BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)];
+    const pos    = randomPos();
+    const id     = 'balloon-' + Date.now() + '-' + Math.random();
 
-    if (pendingShader === 'none') return;
+    // Ballon-Gruppe (Kugel + Schnur)
+    const group = document.createElement('a-entity');
+    group.setAttribute('id', id);
+    group.setAttribute('position', `${pos.x} 0.1 ${pos.z}`);
 
-    if (pendingShader === 'katarakt' || pendingShader === 'farbe') {
-      const isRed = Math.random() > 0.5;
-      const obj = document.createElement('a-sphere');
-      obj.setAttribute('color', isRed ? '#ff2222' : '#22cc44');
-      obj.setAttribute('radius', '0.5');
-      obj.setAttribute('position', '0 0.5 0');
-      obj.setAttribute('material', 'shader: flat');
-      entity.appendChild(obj);
+    // Kugel
+    const sphere = document.createElement('a-sphere');
+    sphere.setAttribute('color', color);
+    sphere.setAttribute('radius', '0.12');
+    sphere.setAttribute('position', '0 0 0');
+    sphere.setAttribute('material', 'shader: flat');
 
-    } else if (pendingShader === 'glaukom') {
-      const obj = document.createElement('a-sphere');
-      obj.setAttribute('color', '#ffdd00');
-      obj.setAttribute('radius', '0.4');
-      obj.setAttribute('position', '0 0.4 0');
-      obj.setAttribute('material', 'shader: flat');
-      entity.appendChild(obj);
+    // Schnur
+    const string = document.createElement('a-cylinder');
+    string.setAttribute('color', '#888888');
+    string.setAttribute('radius', '0.005');
+    string.setAttribute('height', '0.15');
+    string.setAttribute('position', '0 -0.17 0');
+    string.setAttribute('material', 'shader: flat');
 
-    } else if (pendingShader === 'makula') {
-      const number = Math.floor(1000 + Math.random() * 9000);
-      const text = document.createElement('a-text');
-      text.setAttribute('value', String(number));
-      text.setAttribute('color', 'white');
-      text.setAttribute('align', 'center');
-      text.setAttribute('position', '0 0.1 0');
-      text.setAttribute('scale', '2.5 2.5 2.5');
-      text.setAttribute('look-at', '[camera]');
-      entity.appendChild(text);
-    }
+    group.appendChild(sphere);
+    group.appendChild(string);
+    entity.appendChild(group);
+
+    // Animation nach oben
+    const startY = 0.1;
+    const endY   = 1.5;
+    const duration = 3000 + Math.random() * 2000;
+    const startTime = Date.now();
+
+    const balloon = { id, group, isRed, color, popped: false, startTime, duration, startY, endY, pos };
+    balloons.push(balloon);
+
+    // Ballon automatisch entfernen wenn oben angekommen
+    setTimeout(() => {
+      if (!balloon.popped && gameActive) {
+        if (!isRed) {
+          addScore(-1, null);
+          showHitEffect('', null);
+        }
+        removeBalloon(balloon);
+      }
+    }, duration);
   }
 
-  // Marker Events: Objekt neu platzieren wenn Marker gefunden wird
-  document.addEventListener('DOMContentLoaded', () => {
-    const marker = document.getElementById('hiro-marker');
-    if (marker) {
-      marker.addEventListener('markerFound', () => {
-        placeObject();
-      });
+  function removeBalloon(balloon) {
+    balloon.popped = true;
+    if (balloon.group.parentNode) {
+      balloon.group.parentNode.removeChild(balloon.group);
     }
+    const idx = balloons.indexOf(balloon);
+    if (idx > -1) balloons.splice(idx, 1);
+  }
+
+  function animateBalloons() {
+    requestAnimationFrame(animateBalloons);
+    if (!gameActive) return;
+    const now = Date.now();
+    balloons.forEach(b => {
+      if (b.popped) return;
+      const elapsed = now - b.startTime;
+      const pct = Math.min(elapsed / b.duration, 1);
+      const y   = b.startY + (b.endY - b.startY) * pct;
+      b.group.setAttribute('position', `${b.pos.x} ${y} ${b.pos.z}`);
+    });
+  }
+  animateBalloons();
+
+  // Touch auf Ballons erkennen via Raycasting
+  document.addEventListener('DOMContentLoaded', () => {
+    const sceneEl = document.getElementById('ar-scene');
+
+    sceneEl.addEventListener('touchstart', (e) => {
+      if (!gameActive) return;
+      e.preventDefault();
+
+      const touch  = e.touches[0];
+      const mouse  = new THREE.Vector2(
+        (touch.clientX / window.innerWidth)  * 2 - 1,
+       -(touch.clientY / window.innerHeight) * 2 + 1
+      );
+
+      const camera = sceneEl.camera;
+      if (!camera) return;
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+
+      // Alle Balloon-Meshes sammeln
+      const meshes = [];
+      balloons.forEach(b => {
+        if (b.popped) return;
+        b.group.object3D.traverse(child => {
+          if (child.isMesh) {
+            child.userData.balloonRef = b;
+            meshes.push(child);
+          }
+        });
+      });
+
+      const hits = raycaster.intersectObjects(meshes, false);
+      if (hits.length > 0) {
+        const balloon = hits[0].object.userData.balloonRef;
+        if (balloon && !balloon.popped) {
+          popBalloon(balloon, touch.clientX, touch.clientY);
+        }
+      }
+    }, { passive: false });
   });
+
+  function popBalloon(balloon, x, y) {
+    if (balloon.popped) return;
+    if (balloon.isRed) {
+      addScore(-1, x, y);
+      showHitEffect('', x, y);
+    } else {
+      addScore(1, x, y);
+      showHitEffect('+1', x, y);
+    }
+
+    // Platzen-Animation
+    balloon.group.setAttribute('animation', 'property: scale; to: 2 2 2; dur: 150; easing: easeOutQuad');
+    setTimeout(() => removeBalloon(balloon), 150);
+  }
+
+  function showHitEffect(text, x, y) {
+    if (!x) return;
+    const el = document.getElementById('hit-effect');
+    el.textContent = text;
+    el.style.left  = x + 'px';
+    el.style.top   = y + 'px';
+    el.style.color = text === '+1' ? '#00ff88' : '#ff4444';
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 600);
+  }
+
+  // Spielzustand
+  let score         = 0;
+  let totalScore    = 0;
+  let timerInterval = null;
+  let timeLeft      = 0;
+  const ROUND_TIME  = 15;
+  let currentShader = null;
 
   const impairments = {
     none: {
       label: 'Ohne Sehbehinderung',
-      task: 'Schau dich um. Was siehst du auf dem Marker?',
       explanation: 'Zum Vergleich: So sieht die Welt ohne aktive Sehbehinderung aus. Bemerkst du einen Unterschied zu den anderen Runden?'
     },
     katarakt: {
       label: 'Grauer Star',
-      task: 'Welche Farbe hat das Objekt auf dem Marker?',
       explanation: 'Grauer Star trübt die Augenlinse mit zunehmendem Alter. Farben wirken gelblich-verschleiert und Konturen unscharf. Mit einer Operation ist er vollständig heilbar, viele Menschen weltweit haben jedoch keinen Zugang zur Behandlung.'
     },
     glaukom: {
       label: 'Glaukom',
-      task: 'Findest du das Objekt auf dem Marker?',
       explanation: 'Glaukom schädigt den Sehnerv und verengt das Gesichtsfeld von außen. Betroffene bemerken es oft erst spät, weil das zentrale Sehen lange erhalten bleibt.'
     },
     makula: {
       label: 'Makuladegeneration',
-      task: 'Lies die Zahl auf dem Marker.',
       explanation: 'Makuladegeneration zerstört die Netzhautmitte. Genau dort, wo man hinschaut, entsteht ein blinder Fleck und Lesen sowie Gesichtererkennen werden besonders schwer.'
     },
     farbe: {
       label: 'Rot-Grün-Schwäche',
-      task: 'Ist das Objekt auf dem Marker rot oder grün?',
       explanation: 'Rot-Grün-Schwäche ist die häufigste Farbfehlsichtigkeit. Rot und Grün sind kaum unterscheidbar und Ampeln, Obst, Karten und viele Alltagssituationen werden schwieriger.'
     }
   };
 
-  const keys        = Object.keys(impairments);
-  let currentShader = null;
-  let score         = 0;
-  let total         = 0;
-  let timerInterval = null;
-  let timeLeft      = 0;
-  const ROUND_TIME  = 15;
+  const keys = Object.keys(impairments);
+
+  function addScore(delta, x, y) {
+    score += delta;
+    document.getElementById('score-display').textContent = score + ' Punkte';
+  }
+
+  function clearBalloons() {
+    const entity = document.getElementById('ar-object');
+    balloons.forEach(b => {
+      if (b.group.parentNode) b.group.parentNode.removeChild(b.group);
+    });
+    balloons.length = 0;
+  }
 
   function startRound() {
     currentShader = keys[Math.floor(Math.random() * keys.length)];
     setShader(currentShader);
-    setARObject(currentShader);
-    document.getElementById('task-text').textContent = impairments[currentShader].task;
+    score = 0;
+    gameActive = true;
+    clearBalloons();
+
+    document.getElementById('score-display').textContent = '0 Punkte';
     showScreen('screen-game');
+
+    // Ballons spawnen
+    spawnBalloon();
+    spawnBalloon();
+    spawnInterval = setInterval(() => {
+      if (balloons.length < 3) spawnBalloon();
+    }, 1200);
+
     startTimer();
   }
 
@@ -429,41 +539,33 @@
       timeLeft -= 0.1;
       const pct = (timeLeft / ROUND_TIME) * 100;
       bar.style.width = pct + '%';
+      document.getElementById('timer-display').textContent = Math.ceil(timeLeft);
 
       if (pct < 30) bar.style.background = '#ff4444';
       else if (pct < 60) bar.style.background = '#ffaa00';
 
       if (timeLeft <= 0) {
         clearInterval(timerInterval);
-        showFeedback(null);
+        endRound();
       }
     }, 100);
   }
 
-  function showFeedback(answer) {
-    clearInterval(timerInterval);
-    total++;
-
-    const correct  = answer === currentShader;
-    const timedOut = answer === null;
-    if (correct) score++;
+  function endRound() {
+    gameActive = false;
+    clearInterval(spawnInterval);
+    clearBalloons();
+    setShader('none');
+    totalScore += score;
 
     const data = impairments[currentShader];
-
-    document.getElementById('feedback-icon').textContent  = timedOut ? '⏱️' : correct ? '✓' : '✗';
-    document.getElementById('feedback-title').textContent = timedOut ? 'Zeit abgelaufen!' : correct ? 'Richtig!' : 'Nicht ganz.';
-    document.getElementById('feedback-name').textContent  = 'Es war: ' + data.label;
+    document.getElementById('feedback-icon').textContent  = score > 0 ? '🎈' : '😵';
+    document.getElementById('feedback-title').textContent = score + ' Punkte diese Runde';
+    document.getElementById('feedback-name').textContent  = 'Aktive Sehbehinderung: ' + data.label;
     document.getElementById('feedback-text').textContent  = data.explanation;
-    document.getElementById('feedback-score').textContent = score + ' von ' + total + ' richtig';
+    document.getElementById('feedback-score').textContent = 'Gesamt: ' + totalScore + ' Punkte';
 
-    setShader('none');
-    setARObject('none');
     showScreen('screen-feedback');
-  }
-
-  function showEnd() {
-    document.getElementById('end-score').textContent = score + ' von ' + total;
-    showScreen('screen-end');
   }
 
   function showScreen(id) {
@@ -473,17 +575,15 @@
 
   document.getElementById('btn-to-sim').addEventListener('click', () => {
     setShader('none');
-    setARObject('none');
     showScreen('screen-sim');
   });
 
   document.getElementById('btn-to-game').addEventListener('click', () => {
+    totalScore = 0;
     showScreen('screen-game-intro');
   });
 
   document.getElementById('btn-start-game').addEventListener('click', () => {
-    score = 0;
-    total = 0;
     startRound();
   });
 
@@ -493,7 +593,6 @@
 
   document.getElementById('back-btn').addEventListener('click', () => {
     setShader('none');
-    setARObject('none');
     showScreen('screen-start');
   });
 
@@ -502,26 +601,23 @@
       document.querySelectorAll('.btn-shader').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       setShader(btn.dataset.shader);
-      setARObject(btn.dataset.shader);
     });
-  });
-
-  document.querySelectorAll('.btn-answer').forEach(btn => {
-    btn.addEventListener('click', () => showFeedback(btn.dataset.answer));
   });
 
   document.getElementById('btn-next').addEventListener('click', startRound);
 
   document.getElementById('btn-quit').addEventListener('click', () => {
     clearInterval(timerInterval);
+    clearInterval(spawnInterval);
+    gameActive = false;
+    clearBalloons();
     setShader('none');
-    setARObject('none');
-    showEnd();
+    document.getElementById('end-score').textContent = totalScore;
+    showScreen('screen-end');
   });
 
   document.getElementById('btn-replay').addEventListener('click', () => {
-    score = 0;
-    total = 0;
+    totalScore = 0;
     startRound();
   });
 
