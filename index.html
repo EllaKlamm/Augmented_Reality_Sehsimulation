@@ -270,13 +270,35 @@
     requestAnimationFrame(renderOverlay);
     ctx.clearRect(0, 0, overlay.width, overlay.height);
 
+    if (activeShader === 'katarakt') {
+
+  ctx.fillStyle = 'rgba(255,240,180,0.35)';
+  ctx.fillRect(0,0,overlay.width,overlay.height);
+
+  const g = ctx.createRadialGradient(
+    overlay.width/2,
+    overlay.height/2,
+    0,
+    overlay.width/2,
+    overlay.height/2,
+    Math.max(overlay.width, overlay.height)
+  );
+
+  g.addColorStop(0,'rgba(255,255,255,0)');
+  g.addColorStop(1,'rgba(255,255,255,0.4)');
+
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,overlay.width,overlay.height);
+}
+
     if (activeShader === 'glaukom') {
       const cx = overlay.width / 2;
       const cy = overlay.height / 2;
       const r  = Math.max(cx, cy);
       const g  = ctx.createRadialGradient(cx, cy, r * 0.28, cx, cy, r);
       g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(0.6, 'rgba(0,0,0,0.8)');
+      g.addColorStop(0.45, 'rgba(0,0,0,0.15)');
+      g.addColorStop(0.75, 'rgba(0,0,0,0.85)');
       g.addColorStop(1, 'rgba(0,0,0,1)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, overlay.width, overlay.height);
@@ -284,7 +306,7 @@
     } else if (activeShader === 'makula') {
       const cx = overlay.width / 2;
       const cy = overlay.height / 2;
-      const r  = Math.min(overlay.width, overlay.height) * 0.22;
+      const r  = Math.min(overlay.width, overlay.height) * 0.40;
       const g  = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
       g.addColorStop(0, 'rgba(80,60,40,0.95)');
       g.addColorStop(0.4, 'rgba(60,45,30,0.7)');
@@ -403,8 +425,11 @@
   }
   animateBalloons();
 
-  document.addEventListener('touchstart', (e) => {
-    if (!gameActive) return;
+document.addEventListener('touchstart', (e) => {
+
+  console.log("Touch erkannt");
+    if (!gameActive) console.log("Spiel nicht aktiv");
+    return;
 
     const touch = e.touches[0];
     const mouse = new THREE.Vector2(
@@ -430,7 +455,12 @@
       });
     });
 
+    console.log("Meshes:", meshes.length);
+
     const hits = raycaster.intersectObjects(meshes, false);
+
+    console.log("Hits:", hits.length);
+
     if (hits.length > 0) {
       const balloon = hits[0].object.userData.balloonRef;
       if (balloon && !balloon.popped) {
