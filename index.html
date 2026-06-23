@@ -394,47 +394,42 @@
   }
   animateBalloons();
 
-  // Touch auf Ballons erkennen via Raycasting
-  document.addEventListener('DOMContentLoaded', () => {
-    const sceneEl = document.getElementById('ar-scene');
+document.addEventListener('touchstart', (e) => {
+  if (!gameActive) return;
 
-    sceneEl.addEventListener('touchstart', (e) => {
-      if (!gameActive) return;
-      e.preventDefault();
+  const touch = e.touches[0];
+  const mouse = new THREE.Vector2(
+    (touch.clientX / window.innerWidth)  * 2 - 1,
+   -(touch.clientY / window.innerHeight) * 2 + 1
+  );
 
-      const touch  = e.touches[0];
-      const mouse  = new THREE.Vector2(
-        (touch.clientX / window.innerWidth)  * 2 - 1,
-       -(touch.clientY / window.innerHeight) * 2 + 1
-      );
+  const sceneEl = document.getElementById('ar-scene');
+  const camera  = sceneEl.camera;
+  if (!camera) return;
 
-      const camera = sceneEl.camera;
-      if (!camera) return;
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
 
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(mouse, camera);
-
-      // Alle Balloon-Meshes sammeln
-      const meshes = [];
-      balloons.forEach(b => {
-        if (b.popped) return;
-        b.group.object3D.traverse(child => {
-          if (child.isMesh) {
-            child.userData.balloonRef = b;
-            meshes.push(child);
-          }
-        });
-      });
-
-      const hits = raycaster.intersectObjects(meshes, false);
-      if (hits.length > 0) {
-        const balloon = hits[0].object.userData.balloonRef;
-        if (balloon && !balloon.popped) {
-          popBalloon(balloon, touch.clientX, touch.clientY);
-        }
+  const meshes = [];
+  balloons.forEach(b => {
+    if (b.popped) return;
+    b.group.object3D.traverse(child => {
+      if (child.isMesh) {
+        child.userData.balloonRef = b;
+        meshes.push(child);
       }
-    }, { passive: false });
+    });
   });
+
+  const hits = raycaster.intersectObjects(meshes, false);
+  if (hits.length > 0) {
+    const balloon = hits[0].object.userData.balloonRef;
+    if (balloon && !balloon.popped) {
+      popBalloon(balloon, touch.clientX, touch.clientY);
+    }
+  }
+}, { passive: true });
+
 
   function popBalloon(balloon, x, y) {
     if (balloon.popped) return;
