@@ -267,75 +267,76 @@
   let activeShader = 'none';
 
   function renderOverlay() {
-    requestAnimationFrame(renderOverlay);
-    ctx.clearRect(0, 0, overlay.width, overlay.height);
+  requestAnimationFrame(renderOverlay);
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-    if (activeShader === 'katarakt') {
+  const w = overlay.width;
+  const h = overlay.height;
+  const cx = w / 2;
+  const cy = h / 2;
 
-  ctx.fillStyle = 'rgba(255,240,180,0.35)';
-  ctx.fillRect(0,0,overlay.width,overlay.height);
+  if (activeShader === 'katarakt') {
+    // milchiger, gelblicher Schleier
+    ctx.fillStyle = 'rgba(255, 238, 190, 0.38)';
+    ctx.fillRect(0, 0, w, h);
 
-  const g = ctx.createRadialGradient(
-    overlay.width/2,
-    overlay.height/2,
-    0,
-    overlay.width/2,
-    overlay.height/2,
-    Math.max(overlay.width, overlay.height)
-  );
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.fillRect(0, 0, w, h);
 
-  g.addColorStop(0,'rgba(255,255,255,0)');
-  g.addColorStop(1,'rgba(255,255,255,0.4)');
-
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,overlay.width,overlay.height);
-}
-
-    if (activeShader === 'glaukom') {
-      const cx = overlay.width / 2;
-      const cy = overlay.height / 2;
-      const r  = Math.max(cx, cy);
-      const g  = ctx.createRadialGradient(cx, cy, r * 0.28, cx, cy, r);
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(0.45, 'rgba(0,0,0,0.15)');
-      g.addColorStop(0.75, 'rgba(0,0,0,0.85)');
-      g.addColorStop(1, 'rgba(0,0,0,1)');
+    // leichte unregelmäßige Trübung
+    for (let i = 0; i < 18; i++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const r = 80 + Math.random() * 180;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, 'rgba(255,255,255,0.10)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, overlay.width, overlay.height);
-
-    } else if (activeShader === 'makula') {
-      const cx = overlay.width / 2;
-      const cy = overlay.height / 2;
-      const r  = Math.min(overlay.width, overlay.height) * 0.40;
-      const g  = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      g.addColorStop(0, 'rgba(80,60,40,0.95)');
-      g.addColorStop(0.4, 'rgba(60,45,30,0.7)');
-      g.addColorStop(0.8, 'rgba(30,20,10,0.3)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, overlay.width, overlay.height);
+      ctx.fillRect(0, 0, w, h);
     }
   }
-  renderOverlay();
 
- function setShader(name) {
+  else if (activeShader === 'glaukom') {
+    // Tunnelblick: Mitte bleibt frei, außen dunkel
+    const r = Math.max(w, h) * 0.65;
+    const g = ctx.createRadialGradient(cx, cy, r * 0.18, cx, cy, r);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(0.38, 'rgba(0,0,0,0.05)');
+    g.addColorStop(0.62, 'rgba(0,0,0,0.65)');
+    g.addColorStop(1, 'rgba(0,0,0,0.98)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  else if (activeShader === 'makula') {
+    // zentraler blinder Fleck, nicht braun sondern dunkel/grau
+    const r = Math.min(w, h) * 0.34;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, 'rgba(20,20,20,0.98)');
+    g.addColorStop(0.45, 'rgba(30,30,30,0.92)');
+    g.addColorStop(0.75, 'rgba(60,60,60,0.45)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  else if (activeShader === 'farbe') {
+    // sichtbare Annäherung: Rot/Grün weniger unterscheidbar
+    ctx.fillStyle = 'rgba(170, 140, 40, 0.22)';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = 'rgba(120, 120, 120, 0.18)';
+    ctx.fillRect(0, 0, w, h);
+  }
+}
+renderOverlay();
+
+function setShader(name) {
   console.log("Shader gewählt:", name);
-
   activeShader = name;
+
   const scene = document.getElementById('ar-scene');
-
   scene.style.filter = '';
-
-  if (name === 'katarakt') {
-    console.log("Katarakt aktiv");
-    scene.style.filter =
-      'blur(10px) brightness(0.5)';
-  }
-
-  else if (name === 'farbe') {
-    console.log("Farbe aktiv");
-    scene.style.filter = 'url(#deuteranopia)';
-  }
 }
 
   // Luftballon-System
