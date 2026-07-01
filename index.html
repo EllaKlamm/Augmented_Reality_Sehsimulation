@@ -188,6 +188,10 @@
 <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
+<!-- Die a-scene ist die AR Basis, verwaltet von AR.js und A-Frame.
+     Der Hiro Marker ist der Ankerpunkt, an dem alle virtuellen Objekte
+     hängen. Ohne sichtbaren Marker gibt es keine 3D Registrierung,
+     dann bleibt der Bildschirm bei ar-object leer. -->
 <a-scene id="ar-scene" arjs vr-mode-ui="enabled: false">
   <a-marker preset="hiro" id="hiro-marker">
     <a-entity id="ar-object"></a-entity>
@@ -197,14 +201,18 @@
   <a-entity camera></a-entity>
 </a-scene>
 
+<!-- vision-overlay liegt über allem, auch über den Luftballons.
+     Hier werden Glaukom und Makula gezeichnet, weil diese beiden
+     Effekte unabhängig davon funktionieren müssen, was gerade im
+     Bild ist, egal ob Kamera oder virtuelles Objekt. -->
 <canvas id="vision-overlay"></canvas>
 <div id="hit-effect"></div>
 
 <div id="screen-start" class="screen" style="background: #111;">
   <h1>AR Sehsimulation</h1>
   <p>Erlebe wie Menschen mit Sehbehinderungen die Welt wahrnehmen</p>
-  <button class="btn-primary" id="btn-to-sim">Simulation</button>
-  <button class="btn-secondary" id="btn-to-game">Lernspiel</button>
+  <button class="btn-secondary" id="btn-to-sim">Simulation</button>
+  <button class="btn-primary" id="btn-to-game">Lernspiel</button>
 </div>
 
 <div id="screen-game-intro" class="screen hidden" style="background: #111;">
@@ -214,6 +222,8 @@
   <button class="btn-secondary btn-small" id="btn-intro-back">Zurück</button>
 </div>
 
+<!-- Freie Simulation zum Erkunden. ar-object bleibt hier leer, es geht
+     nur um die Kamerabild Verarbeitung, kein Spielziel. -->
 <div id="screen-sim" class="screen hidden">
   <button class="btn-secondary btn-small" id="back-btn">Zurück</button>
   <div id="sim-ui">
@@ -255,7 +265,9 @@
 </div>
 
 <script>
-  // Vision overlay canvas
+  // Der Overlay Canvas muss immer die volle Fenstergröße haben, sonst
+  // stimmen die Koordinaten für die Vignetten nicht mehr, deshalb bei
+  // jedem Resize neu setzen.
   const overlay = document.getElementById('vision-overlay');
   const ctx = overlay.getContext('2d');
 
@@ -268,6 +280,9 @@
 
   let activeShader = 'none';
 
+  // Läuft dauerhaft über requestAnimationFrame, auch wenn gerade keine
+  // Sehbehinderung aktiv ist. So bleibt der Canvas immer sauber
+  // geleert, sobald man auf "Ohne" wechselt.
   function renderOverlay() {
   requestAnimationFrame(renderOverlay);
   ctx.clearRect(0, 0, overlay.width, overlay.height);
@@ -278,6 +293,9 @@
   const cy = h / 2;
 
   if (activeShader === 'katarakt') {
+  // gelblicher Schleier plus ein weiches Streulicht in der Mitte,
+  // ergänzt den blur Filter auf Video und Canvas weiter unten in
+  // setShader. Zusammen ergibt das den typischen milchigen Blick.
   ctx.fillStyle = 'rgba(255, 238, 190, 0.22)';
   ctx.fillRect(0, 0, w, h);
 
@@ -368,12 +386,16 @@ function setShader(name) {
   if (canvas) canvas.style.filter = filterStr;
 }
 
-  // Luftballon-System
+  // Farbpalette für die "guten" Ballons, Rot ist bewusst nicht dabei
+  // und wird separat vergeben, damit es klar als Fehlerfarbe erkennbar
+  // bleibt und nicht zufällig aus der Liste gezogen wird.
   const BALLOON_COLORS = ['#2299ff', '#ffdd00', '#cc44ff', '#ff6600', '#00ccaa'];
   const balloons = [];
   let gameActive = false;
   let spawnInterval = null;
 
+  // Startposition der Ballons relativ zum Marker, damit sie nicht alle
+  // exakt übereinander aufsteigen.
   function randomPos() {
     return {
       x: (Math.random() - 0.5) * 0.5,
@@ -381,6 +403,10 @@ function setShader(name) {
     };
   }
 
+  // Baut einen Ballon aus einfachen A-Frame Primitiven zusammen, Kugel
+  // als Körper, Kegel als Knoten unten, kleine helle Kugel als
+  // Lichtreflex und ein Zylinder als Schnur. Kein externes 3D Modell
+  // nötig, spart Ladezeit.
   function spawnBalloon() {
   const entity = document.getElementById('ar-object');
   const isRed  = Math.random() < 0.3;
@@ -441,6 +467,9 @@ function setShader(name) {
   };
   balloons.push(balloon);
 
+  // Ballon, der nicht rechtzeitig angetippt wurde, verschwindet von
+  // allein. Nur bei einem verpassten guten Ballon gibt es Punktabzug,
+  // ein übersehener roter Ballon ist ja im Sinne der Aufgabe richtig.
   setTimeout(() => {
     if (!balloon.popped && gameActive) {
       if (!isRed) updateScore(-1, null, null);
@@ -460,6 +489,9 @@ function setShader(name) {
     if (idx > -1) balloons.splice(idx, 1);
   }
 
+  // A-Frame hat eine eigene animation Komponente, hier wird die
+  // Position aber lieber manuell pro Frame berechnet, das macht es
+  // einfacher, den Ballon jederzeit anzuhalten, sobald er gepoppt wird.
   function animateBalloons() {
     requestAnimationFrame(animateBalloons);
     if (!gameActive) return;
@@ -475,6 +507,12 @@ function setShader(name) {
   }
   animateBalloons();
 
+// Kein A-Frame Raycaster, sondern eine eigene Lösung: für jeden Ballon
+// wird die 3D Weltposition in 2D Bildschirmkoordinaten umgerechnet und
+// die Distanz zum Tap Punkt gemessen. Der nächste Ballon innerhalb von
+// 80 Pixeln gilt als getroffen. Das funktioniert gut, ist aber
+// empfindlicher gegenüber Bildschirmgröße und Blickwinkel als ein
+// echter Raycast, deshalb hier bei Problemen zuerst nachsehen.
 document.addEventListener('pointerdown', (e) => {
   if (!gameActive) return;
 
@@ -513,6 +551,8 @@ document.addEventListener('pointerdown', (e) => {
   }
 });
 
+// Kleine Partikel, die beim Poppen auseinanderfliegen und ausblenden,
+// rein visuelles Feedback ohne Einfluss auf die Punktzahl.
 function createPopEffect(balloon) {
   const parent = document.getElementById('ar-object');
 
@@ -591,6 +631,11 @@ function createPopEffect(balloon) {
   const ROUND_TIME = 15;
   let currentShader = null;
 
+  // Zentrale Datenquelle für beide Modi. Label und Erklärungstext
+  // werden im Feedback Screen nach jeder Runde angezeigt, die keys
+  // dienen gleichzeitig als Liste, aus der pro Runde zufällig gezogen
+  // wird. "none" ist bewusst mit drin, damit auch eine Runde ganz ohne
+  // Einschränkung möglich ist, zum direkten Vergleich.
   const impairments = {
     none: {
       label: 'Ohne Sehbehinderung',
@@ -630,6 +675,9 @@ function createPopEffect(balloon) {
     balloons.length = 0;
   }
 
+  // Startet eine neue Runde. Wählt zufällig eine Sehbehinderung,
+  // aktiviert den passenden Shader und lässt danach laufend neue
+  // Ballons spawnen, solange weniger als drei gleichzeitig da sind.
   function startRound() {
     currentShader = keys[Math.floor(Math.random() * keys.length)];
     setShader(currentShader);
