@@ -339,25 +339,33 @@ function getArVideo() {
   return document.querySelector('video.arjs-video') || document.querySelector('video');
 }
 
+function getArCanvas() {
+  // Der eigentliche WebGL-Canvas, den A-Frame für die 3D-Objekte
+  // (Luftballons) erzeugt. Muss separat gefiltert werden, sonst
+  // bleiben virtuelle Objekte von der Sehbehinderung unberührt.
+  return document.querySelector('.a-canvas') || document.querySelector('#ar-scene canvas');
+}
+
 function setShader(name) {
   console.log("Shader gewählt:", name);
   activeShader = name;
 
-  const scene = document.getElementById('ar-scene');
-  scene.style.filter = '';
-
-  const video = getArVideo();
-  if (!video) return;
-
+  let filterStr = '';
   if (name === 'katarakt') {
     // Trübung der Augenlinse: Unschärfe, Kontrastverlust, Gelbstich
-    video.style.filter = 'blur(3.5px) sepia(0.35) saturate(0.7) contrast(0.85) brightness(1.08)';
+    filterStr = 'blur(3.5px) sepia(0.35) saturate(0.7) contrast(0.85) brightness(1.08)';
   } else if (name === 'farbe') {
     // nutzt die oben definierte Deuteranopie-Farbmatrix
-    video.style.filter = 'url(#deuteranopia)';
-  } else {
-    video.style.filter = '';
+    filterStr = 'url(#deuteranopia)';
   }
+
+  // Beide Ebenen filtern: Kamerabild UND virtuelle Objekte.
+  // Sonst wären Luftballons von der Sehbehinderung ausgenommen,
+  // was der Simulation widerspricht.
+  const video  = getArVideo();
+  const canvas = getArCanvas();
+  if (video)  video.style.filter  = filterStr;
+  if (canvas) canvas.style.filter = filterStr;
 }
 
   // Luftballon-System
