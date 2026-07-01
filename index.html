@@ -344,8 +344,7 @@
 
   else if (activeShader === 'farbe') {
     // Die eigentliche Simulation läuft jetzt über den SVG-Farbmatrix-Filter
-    // direkt auf dem Kamerabild (siehe setShader). Hier nur ein sehr
-    // leichter Kontrast-Touch, kein zusätzlicher Farbstich mehr nötig.
+    // direkt auf dem Kamerabild (siehe setShader).
   }
 }
 renderOverlay();
@@ -377,7 +376,7 @@ function setShader(name) {
     filterStr = 'url(#deuteranopia)';
   }
 
-  // Beide Ebenen filtern: Kamerabild UND virtuelle Objekte.
+  // Beide Ebenen filtern: Kamerabild und virtuelle Objekte.
   // Sonst wären Luftballons von der Sehbehinderung ausgenommen,
   // was der Simulation widerspricht.
   const video  = getArVideo();
@@ -551,8 +550,7 @@ document.addEventListener('pointerdown', (e) => {
   }
 });
 
-// Kleine Partikel, die beim Poppen auseinanderfliegen und ausblenden,
-// rein visuelles Feedback ohne Einfluss auf die Punktzahl.
+// Kleine Partikel, die beim Poppen auseinanderfliegen und ausblenden
 function createPopEffect(balloon) {
   const parent = document.getElementById('ar-object');
 
@@ -635,7 +633,7 @@ function createPopEffect(balloon) {
   // werden im Feedback Screen nach jeder Runde angezeigt, die keys
   // dienen gleichzeitig als Liste, aus der pro Runde zufällig gezogen
   // wird. "none" ist bewusst mit drin, damit auch eine Runde ganz ohne
-  // Einschränkung möglich ist, zum direkten Vergleich.
+  // Einschränkung möglich ist (dient dem direkten Vergleich)
   const impairments = {
     none: {
       label: 'Ohne Sehbehinderung',
