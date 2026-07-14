@@ -67,6 +67,26 @@ Nutzerin oder des Nutzers. Wer die Augen bewegt statt den Kopf, kann die simulie
 genau das Problem, das in der Literatur an klassischen SimSpecs kritisiert wird. Eine blickabhängige (gaze-contingent) 
 Umsetzung würde Eye-Tracking-Hardware voraussetzen, die im Rahmen dieses Projekts nicht zur Verfügung stand.
 
+
+## Verwendete Bibliotheken
+
+**A-Frame** (Version 1.4.0), Framework für WebVR/WebAR-Szenen auf Basis von Three.js.
+https://aframe.io/releases/1.4.0/aframe.min.js
+
+**AR.js** (aframe-ar Build, master Branch), Marker-basiertes Tracking für A-Frame.
+https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js
+
+Beide Bibliotheken wurden ausschließlich über CDN eingebunden, es wurde kein Code aus ihnen kopiert oder verändert.
+
+## Verwendete externe Ressourcen
+
+**Hiro-Marker**, Standard-Trackingbild von AR.js, keine eigene Erstellung.
+https://github.com/AR-js-org/AR.js/blob/master/data/images/hiro.png
+
+Alle 3D-Objekte (Luftballons, Marker-Inhalte) wurden ausschließlich aus A-Frame Grundprimitiven (Kugel, Kegel, Zylinder) 
+zusammengesetzt, es wurden keine externen 3D-Modelle, Texturen oder Sounds verwendet.
+
+
 ## Literatur
 
 Jones, P.R., Somoskeöy, T., Chow-Wing-Bom, H. et al. Seeing other perspectives: evaluating the use of virtual and 
