@@ -176,13 +176,19 @@
 <svg style="display:none">
   <defs>
     <!-- Rot-Grün-Schwäche über SVG Farbmatrix (Schicht 3)
-    Matrix formatiert jeden Pixel im RGB Farbraum so, dass die Rotkanal-Empfindlichkeit auf den Grünkanal verschoben wird-->
-    <filter id="deuteranopia">
-      <feColorMatrix type="matrix" values="
-        0.367 0.861 -0.228 0 0
-        0.280 0.673  0.047 0 0
-       -0.012 0.043  0.969 0 0
-        0     0      0     1 0"/>
+    Matrix formatiert jeden Pixel im RGB Farbraum so, dass die Rotkanal-Empfindlichkeit auf den Grünkanal verschoben wird
+    Deuteranopie-Farbmatrix: Quelle: DaltonLens (daltonlens.org/cvd-simulation-svg-filters),
+    basierend auf: Vienot, Brettel & Mollon (1999).
+    "Digital video colourmaps for checking the legibility
+    of displays by dichromats." Color Research & Application, 24(4).
+    color-interpolation-filters linearRGB ist erforderlich damit
+    die Matrix im linearen Farbraum rechnet, nicht im gamma-kodierten. -->
+    <filter id="deuteranopia" color-interpolation-filters="linearRGB">
+      <feColorMatrix type="matrix" in="SourceGraphic" values="
+        0.36667  0.86333 -0.23000  0  0
+        0.28333  0.67333  0.04333  0  0
+       -0.02167  0.04333  0.97833  0  0
+        0        0        0        1  0"/>
     </filter>
   </defs>
 </svg>
@@ -212,7 +218,7 @@
 <!-- vision-overlay liegt über allem, auch über den Luftballons.
      Hier werden Glaukom und Makula gezeichnet, weil diese beiden
      Effekte unabhängig davon funktionieren müssen, was gerade im
-     Bild ist, egal ob Kamera oder virtuelles Objekt. -->
+     Bild ist. -->
 <div id="hit-effect"></div>
 
 <div id="screen-start" class="screen" style="background: #111;">
@@ -332,7 +338,9 @@
     // Makuladegeneration typisch ist (Auge kann den Blick nicht mehr
     // stabil auf einen Punkt halten, da genau dort das Sehen fehlt)
     const t = Date.now() / 1000;
-    const jitterX = Math.sin(t * 3.1) * 7 + Math.sin(t * 5.3) * 3; //Sinusfunktionen mit unterschiedlichen Frequenzen, simuliert Fixationsinstabilität
+    // Jitter-Simulation: Konzept aus Jones et al. (2020)
+    // zur Fixationsinstabilität. Sinusfunktionen mit KI-Unterstützung implementiert.
+    const jitterX = Math.sin(t * 3.1) * 7 + Math.sin(t * 5.3) * 3;
     const jitterY = Math.cos(t * 2.7) * 7 + Math.sin(t * 4.1) * 3;
     const mcx = cx + jitterX;
     const mcy = cy + jitterY;
@@ -355,10 +363,10 @@
 renderOverlay();
 
 // ---- Anfang Schicht 3 CSS-Filter auf Kamerabild und Canvas: ----
+// Implementierung mit KI-Unterstützung (Claude, Anthropic)
 function getArVideo() {
   // AR.js fügt das Kamerabild als eigenes <video>-Element ein,
-  // getrennt vom WebGL-Canvas der a-scene. CSS-Filter greifen hier,
-  // anders als bei der a-scene selbst.
+  // getrennt vom WebGL-Canvas der a-scene.
   return document.querySelector('video.arjs-video') || document.querySelector('video');
 }
 
@@ -534,6 +542,8 @@ document.addEventListener('pointerdown', (e) => {
     if (b.popped) return;
 
     // --- Lernspiel: Antippen funktioniert über Projektion statt Raycasting ---
+    // eigene Entscheidung nach Debugging, da A-Frame Raycaster auf Mobilgeräten unzuverlässig war.
+    // Implementierung mit KI-Unterstützung.
     // Für jeden Ballon wird die 3D-Weltposition in 2D-Bildschirmkoordinaten projiziert und die Distanz zum Tap-Punkt gemessen.
     // Wenn die Distanz unter 80 Pixel liegt gilt der Ballon als getroffen
     const worldPos = new THREE.Vector3();

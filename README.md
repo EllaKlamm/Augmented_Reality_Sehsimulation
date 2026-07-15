@@ -92,3 +92,9 @@ zusammengesetzt, es wurden keine externen 3D-Modelle, Texturen oder Sounds verwe
 Jones, P.R., Somoskeöy, T., Chow-Wing-Bom, H. et al. Seeing other perspectives: evaluating the use of virtual and 
 augmented reality to simulate visual impairments (OpenVisSim). 
 npj Digit. Med. 3, 32 (2020). https://doi.org/10.1038/s41746-020-0242-6
+
+Viénot, F., Brettel, H., & Mollon, J. D. Digital video colourmaps for checking the legibility of displays by dichromats.
+Color Research & Application, 24(4), 243–252 (1999).
+
+DaltonLens. Accurate SVG filters for color blindness simulation (2021).
+https://daltonlens.org/cvd-simulation-svg-filters
